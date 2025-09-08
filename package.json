@@ -1,0 +1,53 @@
+{
+  "name": "ice-cream-calculator",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.16.x"
+  },
+  "packageManager": "pnpm@10.7.1",
+  "workspaces": [
+    "packages/*"
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "esbuild",
+      "sharp"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ice-cream-calculator/frontend dev",
+    "dev:backend": "pnpm --filter @ice-cream-calculator/backend dev",
+    "dev:all": "pnpm run --parallel dev",
+    "build": "pnpm run --recursive build",
+    "build:shared": "pnpm --filter @ice-cream-calculator/shared build",
+    "build:frontend": "pnpm --filter @ice-cream-calculator/frontend build",
+    "build:backend": "pnpm --filter @ice-cream-calculator/backend build",
+    "start": "pnpm --filter @ice-cream-calculator/frontend start",
+    "serve": "pnpm --filter @ice-cream-calculator/frontend serve",
+    "type:check": "pnpm run --recursive type:check",
+    "test": "pnpm --filter @ice-cream-calculator/frontend test",
+    "test:ui": "pnpm --filter @ice-cream-calculator/frontend test:ui",
+    "test:coverage": "pnpm --filter @ice-cream-calculator/frontend test:coverage",
+    "biome:check": "biome check --no-errors-on-unmatched --error-on-warnings",
+    "biome:fix": "pnpm biome:check --write",
+    "biome:ci": "biome ci",
+    "check:turbo": "pnpm turbo biome:check type:check test",
+    "release": "cross-env HUSKY=0 commit-and-tag-version",
+    "up-interactive": "pnpm up -i",
+    "up-latest": "pnpm up-interactive -L",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.1.4",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@commitlint/types": "^19.8.1",
+    "commit-and-tag-version": "^12.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
+    "openapi-typescript": "^7.9.1",
+    "typescript": "^5.9.2"
+  }
+}

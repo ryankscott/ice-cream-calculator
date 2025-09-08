@@ -1,0 +1,25 @@
+export type Allergens = {
+  wheat: boolean;
+  fish: boolean;
+  crustacean: boolean;
+  mollusc: boolean;
+  egg: boolean;
+  milk: boolean;
+  lupin: boolean;
+  peanut: boolean;
+  soy: boolean;
+  sesame: boolean;
+  almond: boolean;
+  brazilNut: boolean;
+  cashew: boolean;
+  hazelnut: boolean;
+  macadamia: boolean;
+  pecan: boolean;
+  pistachio: boolean;
+  pineNut: boolean;
+  walnut: boolean;
+  barley: boolean;
+  oats: boolean;
+  rye: boolean;
+  sulphites: boolean;
+};
