@@ -375,6 +375,8 @@ export interface components {
             rye: boolean;
             sulphites: boolean;
         };
+        /** @enum {string} */
+        IngredientCategory: "Mix-in" | "Dried Fruit" | "Other" | "Flavour" | "Fruit" | "Sugar" | "Alcohol" | "Vegetable" | "Seed" | "Dairy" | "Chocolate" | "Oil" | "Stabilizer" | "Grain";
         SugarsPer100g: {
             sucrose: number;
             fructose: number;
@@ -402,7 +404,7 @@ export interface components {
             supplierID: string;
             /** @enum {string} */
             status: "Active" | "Inactive" | "Discontinued";
-            category: string;
+            category: components["schemas"]["IngredientCategory"];
             /** @enum {string} */
             type: "Wet" | "Dry";
             brand: string;
@@ -441,7 +443,7 @@ export interface components {
             supplierID: string;
             /** @enum {string} */
             status: "Active" | "Inactive" | "Discontinued";
-            category: string;
+            category: components["schemas"]["IngredientCategory"];
             /** @enum {string} */
             type: "Wet" | "Dry";
             brand: string;
@@ -475,7 +477,7 @@ export interface components {
             supplierID?: string;
             /** @enum {string} */
             status?: "Active" | "Inactive" | "Discontinued";
-            category?: string;
+            category?: components["schemas"]["IngredientCategory"];
             /** @enum {string} */
             type?: "Wet" | "Dry";
             brand?: string;
@@ -549,6 +551,11 @@ export type Supplier = components['schemas']['Supplier'];
 export type Allergens = components['schemas']['Allergens'];
 export type SugarsPer100g = components['schemas']['SugarsPer100g'];
 export type SupplierContactInfo = components['schemas']['SupplierContactInfo'];
+export type IngredientCategory = components['schemas']['IngredientCategory'];
+
+// Common/shared primitive types (from common.ts)
+export type ID = string;
+export type ISODateString = string;
 
 // Request/Response types
 export type GetIngredientsResponse = components['schemas']['GetIngredientsResponse'];

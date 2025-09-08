@@ -10,7 +10,7 @@ import {
 	type VisibilityState,
 	useReactTable,
 } from "@tanstack/react-table";
-import type { Ingredient, IngredientCategory, IngredientPhysicalType, Status } from "@ice-cream-calculator/shared";
+import type { Ingredient, IngredientCategory, IngredientType, IngredientStatus } from "@ice-cream-calculator/shared";
 import { IngredientDialog } from "./ingredient-dialog";
 import { useIngredients, useDeleteIngredient } from "../hooks/use-ingredients";
 import { Button } from "@/components/ui/button";
@@ -60,9 +60,9 @@ type IngredientsTableProps = {
 	/** Category filter */
 	categoryFilter?: IngredientCategory;
 	/** Status filter */
-	statusFilter?: Status;
+	statusFilter?: IngredientStatus;
 	/** Type filter */
-	typeFilter?: IngredientPhysicalType;
+	typeFilter?: IngredientType;
 };
 
 function centsToCurrency(cents: number) {

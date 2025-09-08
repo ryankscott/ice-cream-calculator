@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import type { IngredientsService } from '../services/ingredients-functional.service';
+import type { IngredientsService } from '../services/ingredients.service';
 import { validateRequest } from '../middleware/validation.middleware';
 import { 
   getIngredientsSchema, 
@@ -8,13 +8,11 @@ import {
   updateIngredientSchema,
   type GetIngredientsResponse,
   type CreateIngredientResponse,
-  type GetSuppliersResponse
+  type GetSuppliersResponse,
+  type GetIngredientResponse,
+  type UpdateIngredientResponse,
+  type DeleteIngredientResponse
 } from '@ice-cream-calculator/shared';
-import type {
-  GetIngredientResponse,
-  UpdateIngredientResponse,
-  DeleteIngredientResponse
-} from '@ice-cream-calculator/shared/dist/types/api-generated';
 
 export function createIngredientsRoutes(ingredientsService: IngredientsService): Router {
   const router = Router();

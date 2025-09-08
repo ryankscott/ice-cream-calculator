@@ -112,6 +112,25 @@
           "sulphites"
         ]
       },
+      "IngredientCategory": {
+        "type": "string",
+        "enum": [
+          "Mix-in",
+          "Dried Fruit",
+          "Other",
+          "Flavour",
+          "Fruit",
+          "Sugar",
+          "Alcohol",
+          "Vegetable",
+          "Seed",
+          "Dairy",
+          "Chocolate",
+          "Oil",
+          "Stabilizer",
+          "Grain"
+        ]
+      },
       "SugarsPer100g": {
         "type": "object",
         "properties": {
@@ -202,7 +221,7 @@
             ]
           },
           "category": {
-            "type": "string"
+            "$ref": "#/components/schemas/IngredientCategory"
           },
           "type": {
             "type": "string",
@@ -378,8 +397,7 @@
             ]
           },
           "category": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/components/schemas/IngredientCategory"
           },
           "type": {
             "type": "string",
@@ -543,8 +561,7 @@
             ]
           },
           "category": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/components/schemas/IngredientCategory"
           },
           "type": {
             "type": "string",

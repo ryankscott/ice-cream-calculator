@@ -50,6 +50,25 @@ const options = {
             'walnut', 'barley', 'oats', 'rye', 'sulphites'
           ]
         },
+        IngredientCategory: {
+          type: 'string',
+          enum: [
+            'Mix-in',
+            'Dried Fruit',
+            'Other',
+            'Flavour',
+            'Fruit',
+            'Sugar',
+            'Alcohol',
+            'Vegetable',
+            'Seed',
+            'Dairy',
+            'Chocolate',
+            'Oil',
+            'Stabilizer',
+            'Grain'
+          ]
+        },
         SugarsPer100g: {
           type: 'object',
           properties: {
@@ -87,7 +106,7 @@ const options = {
             name: { type: 'string' },
             supplierID: { type: 'string' },
             status: { type: 'string', enum: ['Active', 'Inactive', 'Discontinued'] },
-            category: { type: 'string' },
+            category: { $ref: '#/components/schemas/IngredientCategory' },
             type: { type: 'string', enum: ['Wet', 'Dry'] },
             brand: { type: 'string' },
             foodCompositionID: { type: 'string' },
@@ -136,7 +155,7 @@ const options = {
             name: { type: 'string', minLength: 1 },
             supplierID: { type: 'string', minLength: 1 },
             status: { type: 'string', enum: ['Active', 'Inactive', 'Discontinued'] },
-            category: { type: 'string', minLength: 1 },
+            category: { $ref: '#/components/schemas/IngredientCategory' },
             type: { type: 'string', enum: ['Wet', 'Dry'] },
             brand: { type: 'string', minLength: 1 },
             foodCompositionID: { type: 'string', minLength: 1 },
@@ -181,7 +200,7 @@ const options = {
             name: { type: 'string', minLength: 1 },
             supplierID: { type: 'string', minLength: 1 },
             status: { type: 'string', enum: ['Active', 'Inactive', 'Discontinued'] },
-            category: { type: 'string', minLength: 1 },
+            category: { $ref: '#/components/schemas/IngredientCategory' },
             type: { type: 'string', enum: ['Wet', 'Dry'] },
             brand: { type: 'string', minLength: 1 },
             foodCompositionID: { type: 'string', minLength: 1 },

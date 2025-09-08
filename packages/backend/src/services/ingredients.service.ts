@@ -1,93 +1,172 @@
-import type { Ingredient, Supplier, ID } from '@ice-cream-calculator/shared';
-import type { GetIngredientsInput } from '@ice-cream-calculator/shared';
-import { IngredientsRepository, SuppliersRepository, type PaginatedResult } from '../repositories/ingredients.repository';
+// Functional Programming Services Implementation
+// Pure functions for business logic
 
-export class IngredientsService {
-  constructor(
-    private ingredientsRepo: IngredientsRepository,
-    private suppliersRepo: SuppliersRepository
-  ) {}
+import type { Database } from '../database/connection';
+import type {
+  Ingredient,
+  Supplier,
+  ID,
+  GetIngredientsInput,
+  GetIngredientsResponse,
+  CreateIngredientRequest,
+  UpdateIngredientRequest,
+} from '@ice-cream-calculator/shared';
 
-  async getIngredients(params: GetIngredientsInput): Promise<PaginatedResult<Ingredient>> {
-    const { page, limit, search, category, status, type } = params;
-    
-    return this.ingredientsRepo.findAllWithPagination(
-      { page, limit },
-      { search, category, status, type }
-    );
+import {
+  safeFindIngredients,
+  safeFindIngredientById,
+  safeCreateIngredient,
+  safeUpdateIngredient,
+  safeDeleteIngredient,
+} from '../repositories/ingredients.repository';
+
+// Pure functions for supplier operations
+const findAllSuppliers = async (db: Database): Promise<Supplier[]> => {
+  const sql = `
+    SELECT * FROM suppliers 
+    ORDER BY name ASC
+  `;
+  
+  const rows = await db.all(sql);
+  return rows.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    contactInfo: {
+      email: row.email || '',
+      phone: row.phone || '',
+      address: row.address || '',
+    },
+    website: row.website || '',
+  }));
+};
+
+const findSupplierById = async (db: Database, id: ID): Promise<Supplier | null> => {
+  const sql = 'SELECT * FROM suppliers WHERE id = ?';
+  const row = await db.get(sql, [id]);
+  
+  if (!row) return null;
+  
+  return {
+    id: row.id,
+    name: row.name,
+    contactInfo: {
+      email: row.email || '',
+      phone: row.phone || '',
+      address: row.address || '',
+    },
+    website: row.website || '',
+  };
+};
+
+const createSupplier = async (db: Database, data: Omit<Supplier, 'id'>): Promise<Supplier> => {
+  const now = new Date().toISOString();
+  const sql = `
+    INSERT INTO suppliers (name, email, phone, address, website, created_at, last_modified_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+  
+  const values = [
+    data.name,
+    data.contactInfo.email || null,
+    data.contactInfo.phone || null,
+    data.contactInfo.address || null,
+    data.website || null,
+    now,
+    now,
+  ];
+  
+  const result = await db.run(sql, values);
+  
+  if (!result.lastID) {
+    throw new Error('Failed to create supplier');
   }
+  
+  const created = await findSupplierById(db, result.lastID.toString());
+  if (!created) {
+    throw new Error('Failed to retrieve created supplier');
+  }
+  
+  return created;
+};
+
+// Service functions using function composition
+
+export const createIngredientsService = (db: Database) => ({
+  async getIngredients(params: GetIngredientsInput): Promise<GetIngredientsResponse> {
+    return await safeFindIngredients(db, params);
+  },
 
   async getIngredientById(id: ID): Promise<Ingredient> {
-    const ingredient = await this.ingredientsRepo.findById(id);
+    const ingredient = await safeFindIngredientById(db, id);
     if (!ingredient) {
       throw new Error(`Ingredient with id ${id} not found`);
     }
     return ingredient;
-  }
+  },
 
-  async createIngredient(data: Omit<Ingredient, 'id' | 'createdAt' | 'lastModifiedAt' | 'supplier'>): Promise<Ingredient> {
+  async createIngredient(data: CreateIngredientRequest): Promise<Ingredient> {
     // Validate that supplier exists
-    const supplier = await this.suppliersRepo.findById(data.supplierID);
+    const supplier = await findSupplierById(db, data.supplierID);
     if (!supplier) {
       throw new Error(`Supplier with id ${data.supplierID} not found`);
     }
 
-    // Create the ingredient with supplier reference
-    const ingredientData = {
-      ...data,
-      supplier // This will be ignored in the repository, but we validate it exists
-    };
+    return await safeCreateIngredient(db, data);
+  },
 
-    return this.ingredientsRepo.create(ingredientData);
-  }
-
-  async updateIngredient(id: ID, updates: Partial<Omit<Ingredient, 'id' | 'createdAt' | 'supplier'>>): Promise<Ingredient> {
+  async updateIngredient(id: ID, updates: UpdateIngredientRequest): Promise<Ingredient> {
     // Check if ingredient exists
-    const existing = await this.ingredientsRepo.findById(id);
+    const existing = await safeFindIngredientById(db, id);
     if (!existing) {
       throw new Error(`Ingredient with id ${id} not found`);
     }
 
     // If updating supplier, validate it exists
     if (updates.supplierID) {
-      const supplier = await this.suppliersRepo.findById(updates.supplierID);
+      const supplier = await findSupplierById(db, updates.supplierID);
       if (!supplier) {
         throw new Error(`Supplier with id ${updates.supplierID} not found`);
       }
     }
 
-    return this.ingredientsRepo.update(id, updates);
-  }
+    const updated = await safeUpdateIngredient(db, id, updates);
+    if (!updated) {
+      throw new Error(`Failed to update ingredient with id ${id}`);
+    }
+
+    return updated;
+  },
 
   async deleteIngredient(id: ID): Promise<void> {
-    const deleted = await this.ingredientsRepo.delete(id);
+    const deleted = await safeDeleteIngredient(db, id);
     if (!deleted) {
       throw new Error(`Ingredient with id ${id} not found`);
     }
-  }
-
-  async getSuppliers(): Promise<Array<{ id: ID; name: string }>> {
-    const suppliers = await this.suppliersRepo.findAll();
-    return suppliers.map(s => ({ id: s.id, name: s.name }));
-  }
-}
-
-export class SuppliersService {
-  constructor(private suppliersRepo: SuppliersRepository) {}
+  },
 
   async getSuppliers(): Promise<Supplier[]> {
-    return this.suppliersRepo.findAll();
-  }
+    return await findAllSuppliers(db);
+  },
+});
+
+export const createSuppliersService = (db: Database) => ({
+  async getSuppliers(): Promise<Supplier[]> {
+    return await findAllSuppliers(db);
+  },
 
   async getSupplierById(id: ID): Promise<Supplier> {
-    const supplier = await this.suppliersRepo.findById(id);
+    const supplier = await findSupplierById(db, id);
     if (!supplier) {
       throw new Error(`Supplier with id ${id} not found`);
     }
     return supplier;
-  }
+  },
 
   async createSupplier(data: Omit<Supplier, 'id'>): Promise<Supplier> {
-    return this.suppliersRepo.create(data);
-  }
-}
+    return await createSupplier(db, data);
+  },
+});
+
+// Type definitions for the functional services
+export type IngredientsService = ReturnType<typeof createIngredientsService>;
+export type SuppliersService = ReturnType<typeof createSuppliersService>;

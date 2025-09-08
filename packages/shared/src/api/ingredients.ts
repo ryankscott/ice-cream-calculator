@@ -6,9 +6,9 @@ import type {
   GetIngredientsResponse,
   CreateIngredientResponse,
   GetSuppliersResponse,
-  ErrorResponse
+  ErrorResponse,
+  ID
 } from '../types/api-generated';
-import type { ID } from '../types/common';
 
 // Legacy API wrapper types (keeping for backward compatibility)
 export interface ApiResponse<T> {

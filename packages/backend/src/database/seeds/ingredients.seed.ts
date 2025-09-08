@@ -1,9 +1,9 @@
-import { DatabaseInterface } from '../connection';
+import type { Database } from '../connection';
 import logger from '../../utils/logger';
 import { sampleIngredients } from './sample-data';
 
-export async function seedDatabase(db: DatabaseInterface): Promise<void> {
-  logger.info('Starting database seeding...');
+export async function seedFunctionalDatabase(db: Database): Promise<void> {
+  logger.info('Starting functional database seeding...');
 
   try {
     // Check if suppliers already exist
@@ -104,12 +104,12 @@ export async function seedDatabase(db: DatabaseInterface): Promise<void> {
       ]);
     }
 
-    logger.info('Database seeding completed successfully');
+    logger.info('Functional database seeding completed successfully');
   } catch (error) {
     logger.error({
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
-    }, 'Error seeding database');
+    }, 'Error seeding functional database');
     throw error;
   }
 }

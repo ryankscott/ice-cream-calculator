@@ -1,359 +1,347 @@
-import type { DatabaseInterface } from '../database/connection';
-import type { Ingredient, Supplier, ID } from '@ice-cream-calculator/shared';
+// Functional Programming Repository Implementation
+// Pure functions for data access operations
 
-export interface PaginationParams {
-  page: number;
-  limit: number;
-}
+import type { Database } from '../database/connection';
+import type {
+  Ingredient,
+  CreateIngredientRequest,
+  UpdateIngredientRequest,
+  GetIngredientsInput,
+  GetIngredientsResponse,
+  PaginationMeta,
+  ID,
+} from '@ice-cream-calculator/shared';
 
-export interface FilterParams {
-  search?: string;
-  category?: string;
-  status?: string;
-  type?: string;
-}
+// Pure function types for repository operations
+export type FindIngredientsOperation = (
+  db: Database,
+  input: GetIngredientsInput
+) => Promise<GetIngredientsResponse>;
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+export type FindIngredientByIdOperation = (
+  db: Database,
+  id: ID
+) => Promise<Ingredient | null>;
 
-export class SuppliersRepository {
-  constructor(private db: DatabaseInterface) {}
+export type CreateIngredientOperation = (
+  db: Database,
+  data: CreateIngredientRequest
+) => Promise<Ingredient>;
 
-  async findAll(): Promise<Supplier[]> {
-    const rows = await this.db.all(`
-      SELECT * FROM suppliers 
-      ORDER BY name
-    `);
+export type UpdateIngredientOperation = (
+  db: Database,
+  id: ID,
+  data: UpdateIngredientRequest
+) => Promise<Ingredient | null>;
 
-    return rows.map(this.mapRowToSupplier);
+export type DeleteIngredientOperation = (
+  db: Database,
+  id: ID
+) => Promise<boolean>;
+
+// Helper pure functions for data transformation
+const mapRowToIngredient = (row: any): Ingredient => ({
+  id: row.id,
+  name: row.name,
+  supplierID: row.supplier_id,
+  supplier: {
+    id: row.supplier_id,
+    name: row.supplier_name || 'Unknown Supplier',
+    contactInfo: {
+      email: row.supplier_email || '',
+      phone: row.supplier_phone || '',
+      address: row.supplier_address || '',
+    },
+    website: row.supplier_website || '',
+  },
+  status: row.status,
+  category: row.category,
+  type: row.type,
+  brand: row.brand,
+  foodCompositionID: row.food_composition_id,
+  energyPer100g: row.energy_per_100g,
+  proteinPer100g: row.protein_per_100g,
+  totalFatPer100g: row.total_fat_per_100g,
+  saturatedFatPer100g: row.saturated_fat_per_100g,
+  totalCarbPer100g: row.total_carb_per_100g,
+  totalSugarsPer100g: row.total_sugars_per_100g,
+  sodiumMgPer100g: row.sodium_mg_per_100g,
+  waterPer100g: row.water_per_100g,
+  totalSolidsPer100g: row.total_solids_per_100g,
+  otherSolidsPer100g: row.other_solids_per_100g,
+  MSNFPer100g: row.msnf_per_100g,
+  sugarsPer100g: {
+    sucrose: row.sucrose_per_100g,
+    fructose: row.fructose_per_100g,
+    glucose: row.glucose_per_100g,
+    dextrose: row.dextrose_per_100g,
+    alcohol: row.alcohol_sugars_per_100g,
+    other: row.other_sugars_per_100g,
+  },
+  PAC: row.pac,
+  POD: row.pod,
+  HF: row.hf,
+  dryCocoaSolidsPer100g: row.dry_cocoa_solids_per_100g,
+  cocoaButterPer100g: row.cocoa_butter_per_100g,
+  supplierCode: row.supplier_code,
+  packageSizeInGrams: row.package_size_in_grams,
+  costPerPackInCentsExGST: row.cost_per_pack_in_cents_ex_gst,
+  costPer1000gInCentsExGST: row.cost_per_1000g_in_cents_ex_gst,
+  percentOfUsefulProduct: row.percent_of_useful_product,
+  allergens: row.allergens ? JSON.parse(row.allergens) : [],
+  createdAt: row.created_at,
+  lastModifiedAt: row.last_modified_at,
+});
+
+const mapIngredientToRow = (ingredient: any): any[] => {
+  const base = [
+    ingredient.name,
+    ingredient.supplierID,
+    ingredient.status,
+    ingredient.category,
+    ingredient.type,
+    ingredient.brand || null,
+    ingredient.foodCompositionID || null,
+    ingredient.energyPer100g || null,
+    ingredient.proteinPer100g || null,
+    ingredient.totalFatPer100g || null,
+    ingredient.saturatedFatPer100g || null,
+    ingredient.totalCarbPer100g || null,
+    ingredient.totalSugarsPer100g || null,
+    ingredient.sodiumMgPer100g || null,
+    ingredient.waterPer100g || null,
+    ingredient.totalSolidsPer100g || null,
+    ingredient.otherSolidsPer100g || null,
+    ingredient.MSNFPer100g || null,
+    ingredient.sugarsPer100g?.sucrose || null,
+    ingredient.sugarsPer100g?.fructose || null,
+    ingredient.sugarsPer100g?.glucose || null,
+    ingredient.sugarsPer100g?.dextrose || null,
+    ingredient.sugarsPer100g?.alcohol || null,
+    ingredient.sugarsPer100g?.other || null,
+    ingredient.PAC || null,
+    ingredient.POD || null,
+    ingredient.HF || null,
+    ingredient.dryCocoaSolidsPer100g || null,
+    ingredient.cocoaButterPer100g || null,
+    ingredient.supplierCode || null,
+    ingredient.packageSizeInGrams || null,
+    ingredient.costPerPackInCentsExGST || null,
+    ingredient.costPer1000gInCentsExGST || null,
+    ingredient.percentOfUsefulProduct || null,
+    JSON.stringify(ingredient.allergens || []),
+  ];
+  
+  // Add timestamps for create operations
+  if (ingredient.createdAt && ingredient.lastModifiedAt) {
+    return [...base, ingredient.createdAt, ingredient.lastModifiedAt];
   }
+  
+  // Add only lastModifiedAt for update operations
+  return [...base, new Date().toISOString()];
+};
 
-  async findById(id: ID): Promise<Supplier | null> {
-    const row = await this.db.get(
-      'SELECT * FROM suppliers WHERE id = ?',
-      [id]
-    );
-
-    return row ? this.mapRowToSupplier(row) : null;
+// Pure function to build WHERE clause conditions
+const buildWhereConditions = (input: GetIngredientsInput): { clause: string; params: any[] } => {
+  const conditions: string[] = [];
+  const params: any[] = [];
+  
+  if (input.search) {
+    conditions.push('(name LIKE ? OR brand LIKE ? OR supplier_code LIKE ?)');
+    const searchPattern = `%${input.search}%`;
+    params.push(searchPattern, searchPattern, searchPattern);
   }
-
-  async create(supplier: Omit<Supplier, 'id'>): Promise<Supplier> {
-    const id = `sup-${Date.now()}`;
-    
-    await this.db.run(`
-      INSERT INTO suppliers (
-        id, name, email, phone, address, website
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `, [
-      id,
-      supplier.name,
-      supplier.contactInfo.email || null,
-      supplier.contactInfo.phone || null,
-      supplier.contactInfo.address || null,
-      supplier.website || null
-    ]);
-
-    const created = await this.findById(id);
-    if (!created) {
-      throw new Error('Failed to create supplier');
-    }
-    return created;
+  
+  if (input.category) {
+    conditions.push('category = ?');
+    params.push(input.category);
   }
+  
+  if (input.status) {
+    conditions.push('status = ?');
+    params.push(input.status);
+  }
+  
+  if (input.type) {
+    conditions.push('type = ?');
+    params.push(input.type);
+  }
+  
+  const clause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  return { clause, params };
+};
 
-  private mapRowToSupplier(row: any): Supplier {
-    return {
-      id: row.id,
-      name: row.name,
-      contactInfo: {
-        email: row.email || '',
-        phone: row.phone || '',
-        address: row.address || ''
+// Pure function to build pagination
+const buildPagination = (input: GetIngredientsInput): { limit: number; offset: number } => {
+  const page = Math.max(1, input.page || 1);
+  const limit = Math.min(100, Math.max(1, input.limit || 10));
+  const offset = (page - 1) * limit;
+  
+  return { limit, offset };
+};
+
+// Repository operations as pure functions
+
+export const findIngredients: FindIngredientsOperation = async (db, input) => {
+  const { clause: whereClause, params: whereParams } = buildWhereConditions(input);
+  const { limit, offset } = buildPagination(input);
+  
+  // Count total records
+  const countSql = `SELECT COUNT(*) as count FROM ingredients ${whereClause}`;
+  const countResult = await db.get(countSql, whereParams);
+  const total = countResult?.count || 0;
+  
+  // Fetch paginated data
+  const dataSql = `
+    SELECT i.*, s.name as supplier_name, s.email as supplier_email, 
+           s.phone as supplier_phone, s.address as supplier_address, 
+           s.website as supplier_website, s.created_at as supplier_created_at,
+           s.last_modified_at as supplier_last_modified_at
+    FROM ingredients i
+    LEFT JOIN suppliers s ON i.supplier_id = s.id
+    ${whereClause}
+    ORDER BY i.created_at DESC
+    LIMIT ? OFFSET ?
+  `;
+  
+  const rows = await db.all(dataSql, [...whereParams, limit, offset]);
+  
+  // Transform rows to include supplier data
+  const ingredients = rows.map((row: any) => mapRowToIngredient(row));
+  
+  const totalPages = Math.ceil(total / limit);
+  const currentPage = Math.floor(offset / limit) + 1;
+  
+  return {
+    success: true,
+    data: {
+      ingredients,
+      pagination: {
+        currentPage,
+        totalPages,
+        totalCount: total,
+        pageSize: limit,
       },
-      website: row.website || ''
-    };
+    },
+  };
+};
+
+export const findIngredientById: FindIngredientByIdOperation = async (db, id) => {
+  const sql = `
+    SELECT i.*, s.name as supplier_name, s.email as supplier_email,
+           s.phone as supplier_phone, s.address as supplier_address,
+           s.website as supplier_website, s.created_at as supplier_created_at,
+           s.last_modified_at as supplier_last_modified_at
+    FROM ingredients i
+    LEFT JOIN suppliers s ON i.supplier_id = s.id
+    WHERE i.id = ?
+  `;
+  
+  const row = await db.get(sql, [id]);
+  if (!row) return null;
+  
+  return mapRowToIngredient(row);
+};
+
+export const createIngredient: CreateIngredientOperation = async (db, data) => {
+  const now = new Date().toISOString();
+  const ingredientData = { ...data, createdAt: now, lastModifiedAt: now };
+  const values = mapIngredientToRow(ingredientData);
+  
+  const sql = `
+    INSERT INTO ingredients (
+      name, supplier_id, status, category, type, brand, food_composition_id,
+      energy_per_100g, protein_per_100g, total_fat_per_100g, saturated_fat_per_100g,
+      total_carb_per_100g, total_sugars_per_100g, sodium_mg_per_100g, water_per_100g,
+      total_solids_per_100g, other_solids_per_100g, msnf_per_100g,
+      sucrose_per_100g, fructose_per_100g, glucose_per_100g, dextrose_per_100g,
+      alcohol_sugars_per_100g, other_sugars_per_100g,
+      pac, pod, hf, dry_cocoa_solids_per_100g, cocoa_butter_per_100g,
+      supplier_code, package_size_in_grams, cost_per_pack_in_cents_ex_gst,
+      cost_per_1000g_in_cents_ex_gst, percent_of_useful_product,
+      allergens, created_at, last_modified_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+  
+  const result = await db.run(sql, values);
+  
+  if (!result.lastID) {
+    throw new Error('Failed to create ingredient');
   }
-}
-
-export class IngredientsRepository {
-  constructor(private db: DatabaseInterface, private suppliersRepo: SuppliersRepository) {}
-
-  async findAllWithPagination(
-    pagination: PaginationParams,
-    filters: FilterParams = {}
-  ): Promise<PaginatedResult<Ingredient>> {
-    const { page, limit } = pagination;
-    const offset = (page - 1) * limit;
-
-    // Build WHERE conditions
-    const conditions: string[] = [];
-    const params: any[] = [];
-
-    if (filters.search) {
-      conditions.push('(i.name LIKE ? OR i.brand LIKE ? OR s.name LIKE ?)');
-      const searchPattern = `%${filters.search}%`;
-      params.push(searchPattern, searchPattern, searchPattern);
-    }
-
-    if (filters.category) {
-      conditions.push('i.category = ?');
-      params.push(filters.category);
-    }
-
-    if (filters.status) {
-      conditions.push('i.status = ?');
-      params.push(filters.status);
-    }
-
-    if (filters.type) {
-      conditions.push('i.type = ?');
-      params.push(filters.type);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM ingredients i
-      LEFT JOIN suppliers s ON i.supplier_id = s.id
-      ${whereClause}
-    `;
-    const countResult = await this.db.get(countQuery, params);
-    const total = countResult?.total;
-
-    // Get paginated results
-    const dataQuery = `
-      SELECT 
-        i.*,
-        s.name as supplier_name,
-        s.email as supplier_email,
-        s.phone as supplier_phone,
-        s.address as supplier_address,
-        s.website as supplier_website
-      FROM ingredients i
-      LEFT JOIN suppliers s ON i.supplier_id = s.id
-      ${whereClause}
-      ORDER BY i.name
-      LIMIT ? OFFSET ?
-    `;
-    const rows = await this.db.all(dataQuery, [...params, limit, offset]);
-
-    const data = rows.map(this.mapRowToIngredient);
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages
-    };
+  
+  const created = await findIngredientById(db, result.lastID.toString());
+  if (!created) {
+    throw new Error('Failed to retrieve created ingredient');
   }
+  
+  return created;
+};
 
-  async findById(id: ID): Promise<Ingredient | null> {
-    const row = await this.db.get(`
-      SELECT 
-        i.*,
-        s.name as supplier_name,
-        s.email as supplier_email,
-        s.phone as supplier_phone,
-        s.address as supplier_address,
-        s.website as supplier_website
-      FROM ingredients i
-      LEFT JOIN suppliers s ON i.supplier_id = s.id
-      WHERE i.id = ?
-    `, [id]);
+export const updateIngredient: UpdateIngredientOperation = async (db, id, data) => {
+  const existing = await findIngredientById(db, id);
+  if (!existing) return null;
+  
+  const updatedData = { ...data, lastModifiedAt: new Date().toISOString() };
+  const values = mapIngredientToRow(updatedData);
+  
+  const sql = `
+    UPDATE ingredients SET
+      name = ?, supplier_id = ?, status = ?, category = ?, type = ?, brand = ?,
+      food_composition_id = ?, energy_per_100g = ?, protein_per_100g = ?,
+      total_fat_per_100g = ?, saturated_fat_per_100g = ?, total_carb_per_100g = ?,
+      total_sugars_per_100g = ?, sodium_mg_per_100g = ?, water_per_100g = ?,
+      total_solids_per_100g = ?, other_solids_per_100g = ?, msnf_per_100g = ?,
+      sucrose_per_100g = ?, fructose_per_100g = ?, glucose_per_100g = ?,
+      dextrose_per_100g = ?, alcohol_sugars_per_100g = ?, other_sugars_per_100g = ?,
+      pac = ?, pod = ?, hf = ?, dry_cocoa_solids_per_100g = ?, cocoa_butter_per_100g = ?,
+      supplier_code = ?, package_size_in_grams = ?, cost_per_pack_in_cents_ex_gst = ?,
+      cost_per_1000g_in_cents_ex_gst = ?, percent_of_useful_product = ?,
+      allergens = ?, last_modified_at = ?
+    WHERE id = ?
+  `;
+  
+  await db.run(sql, [...values, id]);
+  
+  const updated = await findIngredientById(db, id);
+  return updated;
+};
 
-    return row ? this.mapRowToIngredient(row) : null;
-  }
+export const deleteIngredient: DeleteIngredientOperation = async (db, id) => {
+  const existing = await findIngredientById(db, id);
+  if (!existing) return false;
+  
+  const sql = 'DELETE FROM ingredients WHERE id = ?';
+  const result = await db.run(sql, [id]);
+  
+  return (result.changes || 0) > 0;
+};
 
-  async create(ingredient: Omit<Ingredient, 'id' | 'createdAt' | 'lastModifiedAt'>): Promise<Ingredient> {
-    const id = `ing-${Date.now()}`;
-    const now = new Date().toISOString();
+// Higher-order functions for composition
+export const withTransaction = <T extends any[], R>(
+  operation: (db: Database, ...args: T) => Promise<R>
+) => {
+  return async (db: Database, ...args: T): Promise<R> => {
+    // In a real implementation, this would handle transactions
+    // For in-memory database, we just execute the operation
+    return await operation(db, ...args);
+  };
+};
 
-    await this.db.run(`
-      INSERT INTO ingredients (
-        id, name, supplier_id, status, category, type, brand, food_composition_id,
-        energy_per_100g, protein_per_100g, total_fat_per_100g, saturated_fat_per_100g,
-        total_carb_per_100g, total_sugars_per_100g, sodium_mg_per_100g, water_per_100g,
-        total_solids_per_100g, other_solids_per_100g, msnf_per_100g,
-        sucrose_per_100g, fructose_per_100g, glucose_per_100g, dextrose_per_100g,
-        alcohol_per_100g, other_sugars_per_100g,
-        pac, pod, hf, dry_cocoa_solids_per_100g, cocoa_butter_per_100g,
-        supplier_code, package_size_in_grams, cost_per_pack_in_cents_ex_gst,
-        cost_per_1000g_in_cents_ex_gst, percent_of_useful_product,
-        allergens, created_at, last_modified_at
-      ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?
-      )
-    `, [
-      id, ingredient.name, ingredient.supplierID, ingredient.status,
-      ingredient.category, ingredient.type, ingredient.brand, ingredient.foodCompositionID,
-      ingredient.energyPer100g, ingredient.proteinPer100g, ingredient.totalFatPer100g,
-      ingredient.saturatedFatPer100g, ingredient.totalCarbPer100g, ingredient.totalSugarsPer100g,
-      ingredient.sodiumMgPer100g, ingredient.waterPer100g, ingredient.totalSolidsPer100g,
-      ingredient.otherSolidsPer100g, ingredient.MSNFPer100g,
-      ingredient.sugarsPer100g.sucrose, ingredient.sugarsPer100g.fructose,
-      ingredient.sugarsPer100g.glucose, ingredient.sugarsPer100g.dextrose,
-      ingredient.sugarsPer100g.alcohol, ingredient.sugarsPer100g.other,
-      ingredient.PAC, ingredient.POD, ingredient.HF, ingredient.dryCocoaSolidsPer100g,
-      ingredient.cocoaButterPer100g, ingredient.supplierCode, ingredient.packageSizeInGrams,
-      ingredient.costPerPackInCentsExGST, ingredient.costPer1000gInCentsExGST,
-      ingredient.percentOfUsefulProduct, JSON.stringify(ingredient.allergens), now, now
-    ]);
-
-    const created = await this.findById(id);
-    if (!created) {
-      throw new Error('Failed to create ingredient');
+export const withErrorHandling = <T extends any[], R>(
+  operation: (db: Database, ...args: T) => Promise<R>
+) => {
+  return async (db: Database, ...args: T): Promise<R> => {
+    try {
+      return await operation(db, ...args);
+    } catch (error) {
+      throw new Error(`Repository operation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-    return created;
-  }
+  };
+};
 
-  async update(id: ID, updates: Partial<Omit<Ingredient, 'id' | 'createdAt'>>): Promise<Ingredient> {
-    const now = new Date().toISOString();
-    
-    // Build dynamic update query
-    const updateFields: string[] = [];
-    const params: any[] = [];
-
-    const fieldMappings: { [key: string]: string } = {
-      name: 'name',
-      supplierID: 'supplier_id',
-      status: 'status',
-      category: 'category',
-      type: 'type',
-      brand: 'brand',
-      foodCompositionID: 'food_composition_id',
-      energyPer100g: 'energy_per_100g',
-      proteinPer100g: 'protein_per_100g',
-      totalFatPer100g: 'total_fat_per_100g',
-      saturatedFatPer100g: 'saturated_fat_per_100g',
-      totalCarbPer100g: 'total_carb_per_100g',
-      totalSugarsPer100g: 'total_sugars_per_100g',
-      sodiumMgPer100g: 'sodium_mg_per_100g',
-      waterPer100g: 'water_per_100g',
-      totalSolidsPer100g: 'total_solids_per_100g',
-      otherSolidsPer100g: 'other_solids_per_100g',
-      MSNFPer100g: 'msnf_per_100g',
-      PAC: 'pac',
-      POD: 'pod',
-      HF: 'hf',
-      dryCocoaSolidsPer100g: 'dry_cocoa_solids_per_100g',
-      cocoaButterPer100g: 'cocoa_butter_per_100g',
-      supplierCode: 'supplier_code',
-      packageSizeInGrams: 'package_size_in_grams',
-      costPerPackInCentsExGST: 'cost_per_pack_in_cents_ex_gst',
-      costPer1000gInCentsExGST: 'cost_per_1000g_in_cents_ex_gst',
-      percentOfUsefulProduct: 'percent_of_useful_product'
-    };
-
-    for (const [key, value] of Object.entries(updates)) {
-      if (key === 'sugarsPer100g' && value) {
-        const sugars = value as any;
-        updateFields.push('sucrose_per_100g = ?', 'fructose_per_100g = ?', 'glucose_per_100g = ?', 
-                         'dextrose_per_100g = ?', 'alcohol_per_100g = ?', 'other_sugars_per_100g = ?');
-        params.push(sugars.sucrose, sugars.fructose, sugars.glucose, sugars.dextrose, sugars.alcohol, sugars.other);
-      } else if (key === 'allergens' && value) {
-        updateFields.push('allergens = ?');
-        params.push(JSON.stringify(value));
-      } else if (fieldMappings[key] && value !== undefined) {
-        updateFields.push(`${fieldMappings[key]} = ?`);
-        params.push(value);
-      }
-    }
-
-    if (updateFields.length === 0) {
-      const existing = await this.findById(id);
-      if (!existing) {
-        throw new Error('Ingredient not found');
-      }
-      return existing;
-    }
-
-    updateFields.push('last_modified_at = ?');
-    params.push(now, id);
-
-    await this.db.run(`
-      UPDATE ingredients 
-      SET ${updateFields.join(', ')}
-      WHERE id = ?
-    `, params);
-
-    const updated = await this.findById(id);
-    if (!updated) {
-      throw new Error('Ingredient not found after update');
-    }
-    return updated;
-  }
-
-  async delete(id: ID): Promise<boolean> {
-    const result = await this.db.run('DELETE FROM ingredients WHERE id = ?', [id]);
-    return result.changes > 0;
-  }
-
-  private mapRowToIngredient(row: any): Ingredient {
-    const allergens = row.allergens ? JSON.parse(row.allergens) : {};
-    
-    return {
-      id: row.id,
-      name: row.name,
-      supplierID: row.supplier_id,
-      status: row.status,
-      category: row.category,
-      type: row.type,
-      brand: row.brand || '',
-      foodCompositionID: row.food_composition_id || '',
-      energyPer100g: row.energy_per_100g || 0,
-      proteinPer100g: row.protein_per_100g || 0,
-      totalFatPer100g: row.total_fat_per_100g || 0,
-      saturatedFatPer100g: row.saturated_fat_per_100g || 0,
-      totalCarbPer100g: row.total_carb_per_100g || 0,
-      totalSugarsPer100g: row.total_sugars_per_100g || 0,
-      sodiumMgPer100g: row.sodium_mg_per_100g || 0,
-      waterPer100g: row.water_per_100g || 0,
-      sugarsPer100g: {
-        sucrose: row.sucrose_per_100g || 0,
-        fructose: row.fructose_per_100g || 0,
-        glucose: row.glucose_per_100g || 0,
-        dextrose: row.dextrose_per_100g || 0,
-        alcohol: row.alcohol_per_100g || 0,
-        other: row.other_sugars_per_100g || 0
-      },
-      totalSolidsPer100g: row.total_solids_per_100g || 0,
-      otherSolidsPer100g: row.other_solids_per_100g || 0,
-      MSNFPer100g: row.msnf_per_100g || 0,
-      PAC: row.pac || 0,
-      POD: row.pod || 0,
-      HF: row.hf || 0,
-      dryCocoaSolidsPer100g: row.dry_cocoa_solids_per_100g || 0,
-      cocoaButterPer100g: row.cocoa_butter_per_100g || 0,
-      supplier: {
-        id: row.supplier_id,
-        name: row.supplier_name || '',
-        contactInfo: {
-          email: row.supplier_email || '',
-          phone: row.supplier_phone || '',
-          address: row.supplier_address || ''
-        },
-        website: row.supplier_website || ''
-      },
-      supplierCode: row.supplier_code || '',
-      packageSizeInGrams: row.package_size_in_grams || 0,
-      costPerPackInCentsExGST: row.cost_per_pack_in_cents_ex_gst || 0,
-      costPer1000gInCentsExGST: row.cost_per_1000g_in_cents_ex_gst || 0,
-      percentOfUsefulProduct: row.percent_of_useful_product || 100,
-      allergens,
-      createdAt: row.created_at,
-      lastModifiedAt: row.last_modified_at
-    };
-  }
-}
+// Composed operations using function composition
+export const safeCreateIngredient = withErrorHandling(withTransaction(createIngredient));
+export const safeUpdateIngredient = withErrorHandling(withTransaction(updateIngredient));
+export const safeDeleteIngredient = withErrorHandling(withTransaction(deleteIngredient));
+export const safeFindIngredients = withErrorHandling(findIngredients);
+export const safeFindIngredientById = withErrorHandling(findIngredientById);
