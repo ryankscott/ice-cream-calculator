@@ -1,11 +1,18 @@
 {
-  "projectName": "vite-react-tailwind-starter",
+  "projectName": "ice-cream-calculator",
   "mode": "file-router",
   "typescript": true,
   "tailwind": true,
   "packageManager": "pnpm",
+  "addOnOptions": {},
   "git": true,
   "version": 1,
   "framework": "react-cra",
-  "chosenAddOns": []
+  "chosenAddOns": [
+    "biome",
+    "start",
+    "shadcn",
+    "table",
+    "tanstack-query"
+  ]
 }

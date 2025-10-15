@@ -1,0 +1,560 @@
+openapi: 3.1.0
+info:
+  title: Gelato Ingredient API
+  version: 0.1.0
+  description: >
+    Canonical schema for managing gelato ingredients and suppliers inside the
+    ice-cream-calculator project. This document acts as the single source of truth
+    for entity definitions and API payload shapes.
+  contact:
+    name: Ice Cream Calculator Maintainers
+    url: https://github.com/ryanscott/ice-cream-calculator
+    email: engineering@icecream.example
+servers:
+  - url: http://localhost:4000
+    description: Local development server
+tags:
+  - name: Ingredients
+    description: Ingredient catalog operations
+  - name: Suppliers
+    description: Supplier directory operations
+paths:
+  /api/ingredients:
+    get:
+      tags: [Ingredients]
+      summary: List ingredients
+      description: Retrieve a paginated list of ingredients with optional filters.
+      operationId: listIngredients
+      parameters:
+        - $ref: '#/components/parameters/IngredientStatus'
+        - $ref: '#/components/parameters/IngredientCategory'
+        - $ref: '#/components/parameters/SupplierFilterId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: A paginated list of ingredients
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngredientListResponse'
+    post:
+      tags: [Ingredients]
+      summary: Create an ingredient
+      description: Register a new ingredient record in the catalog.
+      operationId: createIngredient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngredientCreateInput'
+      responses:
+        '201':
+          description: Ingredient created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+  /api/ingredients/{ingredientId}:
+    parameters:
+      - $ref: '#/components/parameters/IngredientId'
+    get:
+      tags: [Ingredients]
+      summary: Retrieve an ingredient
+      description: Fetch a single ingredient by its identifier.
+      operationId: getIngredient
+      responses:
+        '200':
+          description: Found ingredient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Ingredients]
+      summary: Replace an ingredient
+      description: Replace all mutable fields of an ingredient.
+      operationId: updateIngredient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngredientUpdateInput'
+      responses:
+        '200':
+          description: Updated ingredient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Ingredients]
+      summary: Archive an ingredient
+      description: Mark an ingredient as inactive or remove it from active catalogs.
+      operationId: deleteIngredient
+      responses:
+        '204':
+          description: Ingredient archived
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/ingredients/{ingredientId}/status:
+    parameters:
+      - $ref: '#/components/parameters/IngredientId'
+    patch:
+      tags: [Ingredients]
+      summary: Set ingredient status
+      description: Update the active/inactive status of an ingredient.
+      operationId: setIngredientStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngredientStatusUpdateInput'
+      responses:
+        '200':
+          description: Updated ingredient status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/suppliers:
+    get:
+      tags: [Suppliers]
+      summary: List suppliers
+      description: Retrieve a paginated list of ingredient suppliers.
+      operationId: listSuppliers
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: A paginated list of suppliers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierListResponse'
+    post:
+      tags: [Suppliers]
+      summary: Create a supplier
+      description: Add a new supplier to the directory.
+      operationId: createSupplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCreateInput'
+      responses:
+        '201':
+          description: Supplier created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+  /api/suppliers/{supplierId}:
+    parameters:
+      - $ref: '#/components/parameters/SupplierId'
+    get:
+      tags: [Suppliers]
+      summary: Retrieve a supplier
+      description: Fetch a single supplier by its identifier.
+      operationId: getSupplier
+      responses:
+        '200':
+          description: Found supplier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Suppliers]
+      summary: Replace a supplier
+      description: Replace all mutable fields of a supplier.
+      operationId: updateSupplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierUpdateInput'
+      responses:
+        '200':
+          description: Updated supplier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Suppliers]
+      summary: Remove a supplier
+      description: Delete a supplier when it is no longer needed.
+      operationId: deleteSupplier
+      responses:
+        '204':
+          description: Supplier deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  parameters:
+    IngredientId:
+      name: ingredientId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/IngredientId'
+    SupplierId:
+      name: supplierId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/SupplierId'
+    SupplierFilterId:
+      name: supplierId
+      in: query
+      required: false
+      description: Filter ingredients by supplier identifier.
+      schema:
+        $ref: '#/components/schemas/SupplierId'
+    IngredientStatus:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/IngredientStatus'
+    IngredientCategory:
+      name: category
+      in: query
+      required: false
+      schema:
+        type: string
+        description: Filter by category slug
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 25
+  schemas:
+    IngredientId:
+      type: string
+      description: Unique ingredient identifier (UUID v4)
+      format: uuid
+    SupplierId:
+      type: string
+      description: Unique supplier identifier (UUID v4)
+      format: uuid
+    DateTime:
+      type: string
+      format: date-time
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+        totalItems:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+      required:
+        - page
+        - pageSize
+        - totalItems
+        - totalPages
+    SupplierBase:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+      required:
+        - name
+    SupplierCreateInput:
+      allOf:
+        - $ref: '#/components/schemas/SupplierBase'
+    SupplierUpdateInput:
+      allOf:
+        - $ref: '#/components/schemas/SupplierBase'
+        - type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/SupplierId'
+          required:
+            - id
+    Supplier:
+      allOf:
+        - $ref: '#/components/schemas/SupplierBase'
+        - type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/SupplierId'
+            createdAt:
+              $ref: '#/components/schemas/DateTime'
+            lastModifiedAt:
+              $ref: '#/components/schemas/DateTime'
+          required:
+            - id
+            - createdAt
+            - lastModifiedAt
+    SupplierListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Supplier'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+      required:
+        - data
+        - meta
+    IngredientStatus:
+      type: string
+      enum:
+        - Active
+        - Inactive
+    IngredientBase:
+      type: object
+      properties:
+        name:
+          type: string
+        supplierId:
+          $ref: '#/components/schemas/SupplierId'
+        status:
+          $ref: '#/components/schemas/IngredientStatus'
+        category:
+          type: string
+        type:
+          type: string
+        brand:
+          type: string
+          nullable: true
+        foodCompositionId:
+          type: string
+          nullable: true
+        energyPer100g:
+          type: number
+          format: float
+          nullable: true
+        proteinPer100g:
+          type: number
+          format: float
+          nullable: true
+        totalFatPer100g:
+          type: number
+          format: float
+          nullable: true
+        saturatedFatPer100g:
+          type: number
+          format: float
+          nullable: true
+        totalCarbPer100g:
+          type: number
+          format: float
+          nullable: true
+        totalSugarsPer100g:
+          type: number
+          format: float
+          nullable: true
+        sodiumMgPer100g:
+          type: number
+          format: float
+          nullable: true
+        waterPer100g:
+          type: number
+          format: float
+          nullable: true
+        totalSolidsPer100g:
+          type: number
+          format: float
+          nullable: true
+        otherSolidsPer100g:
+          type: number
+          format: float
+          nullable: true
+        msnfPer100g:
+          type: number
+          format: float
+          nullable: true
+        sucrosePer100g:
+          type: number
+          format: float
+          nullable: true
+        fructosePer100g:
+          type: number
+          format: float
+          nullable: true
+        glucosePer100g:
+          type: number
+          format: float
+          nullable: true
+        dextrosePer100g:
+          type: number
+          format: float
+          nullable: true
+        alcoholPer100g:
+          type: number
+          format: float
+          nullable: true
+        otherSugarsPer100g:
+          type: number
+          format: float
+          nullable: true
+        pac:
+          type: number
+          format: float
+          nullable: true
+        pod:
+          type: number
+          format: float
+          nullable: true
+        hf:
+          type: number
+          format: float
+          nullable: true
+        dryCocoaSolidsPer100g:
+          type: number
+          format: float
+          nullable: true
+        cocoaButterPer100g:
+          type: number
+          format: float
+          nullable: true
+        supplierCode:
+          type: string
+          nullable: true
+        packageSizeInGrams:
+          type: number
+          format: float
+          nullable: true
+        costPerPackInCentsExGst:
+          type: integer
+          nullable: true
+        costPer1000gInCentsExGst:
+          type: integer
+          nullable: true
+        percentOfUsefulProduct:
+          type: number
+          format: float
+          nullable: true
+        allergens:
+          $ref: '#/components/schemas/IngredientAllergens'
+      required:
+        - name
+        - supplierId
+        - status
+        - category
+        - type
+    IngredientAllergens:
+      type: object
+      description: Map of allergen identifiers to boolean presence flags or metadata.
+      additionalProperties:
+        oneOf:
+          - type: boolean
+          - type: string
+          - type: number
+          - type: object
+    IngredientCreateInput:
+      allOf:
+        - $ref: '#/components/schemas/IngredientBase'
+        - type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/IngredientId'
+          required:
+            - id
+    IngredientUpdateInput:
+      allOf:
+        - $ref: '#/components/schemas/IngredientBase'
+        - type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/IngredientId'
+          required:
+            - id
+    Ingredient:
+      allOf:
+        - $ref: '#/components/schemas/IngredientBase'
+        - type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/IngredientId'
+            createdAt:
+              $ref: '#/components/schemas/DateTime'
+            lastModifiedAt:
+              $ref: '#/components/schemas/DateTime'
+          required:
+            - id
+            - createdAt
+            - lastModifiedAt
+    IngredientStatusUpdateInput:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/IngredientStatus'
+      required:
+        - status
+    IngredientListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingredient'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+      required:
+        - data
+        - meta
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            required:
+              - message

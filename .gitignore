@@ -3,21 +3,10 @@ node_modules
 dist
 dist-ssr
 *.local
-
-yarn-error.log*
-.pnpm-debug.log*
-
-# TS
-*.tsbuildinfo
-
-# Turbo
-.turbo
-
-stats.*
-
-# Test
-coverage/
-
+count.txt
+.env
+.nitro
 .tanstack
 .output
-.vercel
+.vinxi
+todos.json

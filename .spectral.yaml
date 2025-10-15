@@ -1,0 +1,4 @@
+extends:
+  - ./node_modules/@stoplight/spectral-rulesets/dist/oas/index.js
+rules:
+  oas3-valid-media-example: off
