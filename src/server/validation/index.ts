@@ -1,3 +1,2 @@
-export * from './ingredients'
-export * from './suppliers'
-
+export * from "./ingredients";
+export * from "./suppliers";

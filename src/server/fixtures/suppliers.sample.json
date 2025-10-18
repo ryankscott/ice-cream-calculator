@@ -1,18 +1,18 @@
 [
-  {
-    "id": "sup-demo-creamery",
-    "name": "Demo Creamery Collective",
-    "email": "orders@democreamery.example",
-    "phone": "+1-555-111-2222",
-    "address": "10 Creamery Lane, Gelato City",
-    "website": "https://democreamery.example"
-  },
-  {
-    "id": "sup-tanstack-gelato",
-    "name": "TanStack Gelato Supply",
-    "email": "hello@tanstackgelato.example",
-    "phone": "+1-555-333-4444",
-    "address": "42 Router Road, Queryville",
-    "website": "https://tanstackgelato.example"
-  }
+	{
+		"id": "sup-demo-creamery",
+		"name": "Demo Creamery Collective",
+		"email": "orders@democreamery.example",
+		"phone": "+1-555-111-2222",
+		"address": "10 Creamery Lane, Gelato City",
+		"website": "https://democreamery.example"
+	},
+	{
+		"id": "sup-tanstack-gelato",
+		"name": "TanStack Gelato Supply",
+		"email": "hello@tanstackgelato.example",
+		"phone": "+1-555-333-4444",
+		"address": "42 Router Road, Queryville",
+		"website": "https://tanstackgelato.example"
+	}
 ]

@@ -1,61 +1,50 @@
-import { z } from 'zod'
+import { z } from "zod";
 
-import { schemas } from '../generated/zod-schemas'
+import { schemas } from "../generated/zod-schemas";
 
-export const IngredientCreateSchema = schemas.IngredientCreateInput
-export type IngredientCreateInput = z.infer<typeof IngredientCreateSchema>
+export const IngredientCreateSchema = schemas.IngredientCreateInput;
+export type IngredientCreateInput = z.infer<typeof IngredientCreateSchema>;
 
-export const IngredientUpdateSchema = schemas.IngredientUpdateInput
-export type IngredientUpdateInput = z.infer<typeof IngredientUpdateSchema>
+export const IngredientUpdateSchema = schemas.IngredientUpdateInput;
+export type IngredientUpdateInput = z.infer<typeof IngredientUpdateSchema>;
 
-export const IngredientStatusUpdateSchema = schemas.IngredientStatusUpdateInput
+export const IngredientStatusUpdateSchema = schemas.IngredientStatusUpdateInput;
 export type IngredientStatusUpdateInput = z.infer<
-  typeof IngredientStatusUpdateSchema
->
+	typeof IngredientStatusUpdateSchema
+>;
 
-export const IngredientIdSchema = schemas.IngredientId.uuid()
+export const IngredientIdSchema = schemas.IngredientId.uuid();
 
 export const IngredientListQuerySchema = z
-  .object({
-    status: schemas.IngredientStatus.optional(),
-    category: z.string().min(1).optional(),
-    supplierId: schemas.SupplierId.uuid().optional(),
-    page: z
-      .union([z.number(), z.string()])
-      .transform((value) => Number(value))
-      .pipe(z.number().int().min(1))
-      .default(1),
-    pageSize: z
-      .union([z.number(), z.string()])
-      .transform((value) => Number(value))
-      .pipe(z.number().int().min(1).max(200))
-      .default(25),
-  })
-  .strict()
+	.object({
+		status: schemas.IngredientStatus.optional(),
+		category: z.string().min(1).optional(),
+		supplierId: schemas.SupplierId.uuid().optional(),
+	})
+	.strict();
 
-export type IngredientListQuery = z.infer<typeof IngredientListQuerySchema>
+export type IngredientListQuery = z.infer<typeof IngredientListQuerySchema>;
 
 export function validateIngredientCreate(
-  input: unknown,
+	input: unknown,
 ): IngredientCreateInput {
-  return IngredientCreateSchema.parse(input)
+	return IngredientCreateSchema.parse(input);
 }
 
 export function validateIngredientUpdate(
-  input: unknown,
+	input: unknown,
 ): IngredientUpdateInput {
-  return IngredientUpdateSchema.parse(input)
+	return IngredientUpdateSchema.parse(input);
 }
 
 export function validateIngredientStatusUpdate(
-  input: unknown,
+	input: unknown,
 ): IngredientStatusUpdateInput {
-  return IngredientStatusUpdateSchema.parse(input)
+	return IngredientStatusUpdateSchema.parse(input);
 }
 
 export function validateIngredientListQuery(
-  input: unknown,
+	input: unknown,
 ): IngredientListQuery {
-  return IngredientListQuerySchema.parse(input)
+	return IngredientListQuerySchema.parse(input);
 }
-

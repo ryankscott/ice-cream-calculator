@@ -1,10 +1,12 @@
-import { MigrationInterface, QueryRunner } from 'typeorm'
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
-export class CreateSuppliersAndIngredients1710000000000 implements MigrationInterface {
-  name = 'CreateSuppliersAndIngredients1710000000000'
+export class CreateSuppliersAndIngredients1710000000000
+	implements MigrationInterface
+{
+	name = "CreateSuppliersAndIngredients1710000000000";
 
-  public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
+	public async up(queryRunner: QueryRunner): Promise<void> {
+		await queryRunner.query(`
       CREATE TABLE "suppliers" (
         "id" TEXT PRIMARY KEY NOT NULL,
         "name" TEXT NOT NULL,
@@ -15,9 +17,9 @@ export class CreateSuppliersAndIngredients1710000000000 implements MigrationInte
         "created_at" TEXT NOT NULL DEFAULT (datetime('now')),
         "last_modified_at" TEXT NOT NULL DEFAULT (datetime('now'))
       )
-    `)
+    `);
 
-    await queryRunner.query(`
+		await queryRunner.query(`
       CREATE TABLE "ingredients" (
         "id" TEXT PRIMARY KEY NOT NULL,
         "name" TEXT NOT NULL,
@@ -59,28 +61,30 @@ export class CreateSuppliersAndIngredients1710000000000 implements MigrationInte
         "last_modified_at" TEXT NOT NULL DEFAULT (datetime('now')),
         CONSTRAINT "FK_ingredients_supplier" FOREIGN KEY ("supplier_id") REFERENCES "suppliers" ("id") ON DELETE RESTRICT ON UPDATE NO ACTION
       )
-    `)
+    `);
 
-    await queryRunner.query(`
+		await queryRunner.query(`
       CREATE INDEX "idx_ingredients_supplier_id" ON "ingredients" ("supplier_id")
-    `)
-    await queryRunner.query(`
+    `);
+		await queryRunner.query(`
       CREATE INDEX "idx_ingredients_category" ON "ingredients" ("category")
-    `)
-    await queryRunner.query(`
+    `);
+		await queryRunner.query(`
       CREATE INDEX "idx_ingredients_status" ON "ingredients" ("status")
-    `)
-    await queryRunner.query(`
+    `);
+		await queryRunner.query(`
       CREATE INDEX "idx_ingredients_name" ON "ingredients" ("name")
-    `)
-  }
+    `);
+	}
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_name"`)
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_status"`)
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_category"`)
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_supplier_id"`)
-    await queryRunner.query(`DROP TABLE IF EXISTS "ingredients"`)
-    await queryRunner.query(`DROP TABLE IF EXISTS "suppliers"`)
-  }
+	public async down(queryRunner: QueryRunner): Promise<void> {
+		await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_name"`);
+		await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_status"`);
+		await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_category"`);
+		await queryRunner.query(
+			`DROP INDEX IF EXISTS "idx_ingredients_supplier_id"`,
+		);
+		await queryRunner.query(`DROP TABLE IF EXISTS "ingredients"`);
+		await queryRunner.query(`DROP TABLE IF EXISTS "suppliers"`);
+	}
 }
