@@ -12,10 +12,22 @@ The client application lives in `src`, with feature UI in `src/components`, rout
 - `pnpm lint`, `pnpm format`, and `pnpm check` apply Biome linting, formatting, and combined checks.
 
 ## Coding Style & Naming Conventions
-Write React components in TypeScript using functional components and hooks; avoid class components and prefer pure helper functions over shared mutable state. Name component files with `PascalCase.tsx`, supporting utilities with `camelCase.ts`, and co-locate styles or hooks alongside their owners where it clarifies intent. Tailwind CSS powers styling; prefer utility classes over custom CSS, and keep shared tokens in `styles.css`. Run Biome before pushing—unformatted code blocks merges.
+Write React components in TypeScript using functional components and hooks; avoid class components and prefer pure helper functions over shared mutable state. Name component files with `PascalCase.tsx`, supporting utilities with `camelCase.ts`, and co-locate styles or hooks alongside their owners where it clarifies intent. Tailwind CSS powers styling; prefer utility classes over custom CSS, and keep shared tokens in `styles.css`. Run Biome before pushing—unformatted code blocks merges. Always prefer shadcn components for UI elements; check `/src/components/ui` first before creating custom components.
+
+## Component Library
+Use shadcn components whenever possible for consistent styling and behavior. The shadcn component library is already integrated in the project; available components are located in `/src/components/ui`. When building new features, import and compose shadcn components rather than creating custom implementations. This ensures a cohesive design system and reduces maintenance overhead.
 
 ## Testing Guidelines
 Use Vitest with Testing Library helpers for component behavior; import from `@testing-library/react` rather than shallow rendering. Place specs next to the code under test using the `.test.ts` or `.test.tsx` suffix (e.g., `ice-cream-card.test.tsx`). Cover stateful hooks and router loaders with focused tests, mocking network calls via `fetch` or lightweight fixtures in `src/data`. Aim to exercise new logic paths and keep CI green.
+
+## Work Tracking with BD
+Use BD (Beads) to track all work items and maintain visibility into the development process. Before starting work on a task:
+- Create an issue in BD using `bd create` with a clear title and description of what you're implementing
+- Set acceptance criteria and any relevant dependencies  
+- Claim the work by updating the issue status to `in_progress` using `bd update`
+- Reference the issue ID in commit messages for traceability
+
+Keep issues updated as you progress, marking them `blocked` if you hit dependencies and `closed` when complete. This creates a clear record of development decisions and work history for the team.
 
 ## Commit & Pull Request Guidelines
 Follow the existing history’s concise, imperative subject lines (e.g., `Fix typing`). Commit logical units separately and avoid bundling generated artifacts. Pull requests should describe the change, outline validation steps (`pnpm test`, `pnpm lint`), and link related issues. For UI updates, attach before/after screenshots or GIFs. Request review when all checks pass and outstanding comments are addressed.
