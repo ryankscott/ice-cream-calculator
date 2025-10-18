@@ -1,0 +1,145 @@
+import {
+	flexRender,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getPaginationRowModel,
+	getSortedRowModel,
+	type SortingState,
+	useReactTable,
+	type VisibilityState,
+} from "@tanstack/react-table";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import type { Supplier } from "@/lib/api/suppliers";
+import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { getSuppliersColumns } from "./columns";
+import { SupplierDetailDialog } from "./SupplierDetailDialog";
+import { DEFAULT_COLUMN_VISIBILITY } from "./suppliers-table.utils";
+import { PaginationControls, TableControls } from "./TableControls";
+
+export function SuppliersTable() {
+	const [globalFilter, setGlobalFilter] = useState("");
+	const [sorting, setSorting] = useState<SortingState>([]);
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+		DEFAULT_COLUMN_VISIBILITY,
+	);
+	const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+		null,
+	);
+
+	const { data, isLoading, isError, error } = useSuppliers();
+
+	const suppliers = useMemo(() => data?.data ?? [], [data?.data]);
+
+	const columns = useMemo(() => getSuppliersColumns(), []);
+
+	const table = useReactTable({
+		data: suppliers,
+		columns,
+		state: {
+			globalFilter,
+			sorting,
+			columnVisibility,
+		},
+		onGlobalFilterChange: setGlobalFilter,
+		onSortingChange: setSorting,
+		onColumnVisibilityChange: setColumnVisibility,
+		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		getPaginationRowModel: getPaginationRowModel(),
+	});
+
+	if (isLoading) {
+		return (
+			<Alert className="">
+				<Loader2 className="" />
+				<AlertTitle className="">Loading</AlertTitle>
+				<AlertDescription className="">Fetching suppliers…</AlertDescription>
+			</Alert>
+		);
+	}
+
+	if (isError) {
+		return (
+			<Alert variant="destructive">
+				<AlertCircle className="h-4 w-4" />
+				<AlertTitle>Error</AlertTitle>
+				<AlertDescription>
+					{error instanceof Error ? error.message : "Unable to load suppliers."}
+				</AlertDescription>
+			</Alert>
+		);
+	}
+	if (!suppliers.length) {
+		return (
+			<div className="rounded-xl border">
+				No suppliers yet. Start by adding one from the backend API.
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-4">
+			<TableControls
+				table={table}
+				globalFilter={globalFilter}
+				onGlobalFilterChange={setGlobalFilter}
+				itemsCount={suppliers.length}
+				label="Suppliers"
+			/>
+
+			<div className="rounded-md border">
+				<Table>
+					<TableHeader>
+						{table.getHeaderGroups().map((headerGroup) => (
+							<TableRow key={headerGroup.id}>
+								{headerGroup.headers.map((header) => (
+									<TableHead key={header.id}>
+										{header.isPlaceholder
+											? null
+											: flexRender(
+													header.column.columnDef.header,
+													header.getContext(),
+												)}
+									</TableHead>
+								))}
+							</TableRow>
+						))}
+					</TableHeader>
+					<TableBody>
+						{table.getRowModel().rows.map((row) => (
+							<TableRow
+								key={row.id}
+								onClick={() => setSelectedSupplier(row.original)}
+							>
+								{row.getVisibleCells().map((cell) => (
+									<TableCell key={cell.id}>
+										{flexRender(cell.column.columnDef.cell, cell.getContext())}
+									</TableCell>
+								))}
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</div>
+
+			<PaginationControls table={table} />
+
+			<SupplierDetailDialog
+				supplier={selectedSupplier}
+				open={!!selectedSupplier}
+				onOpenChange={(open) => !open && setSelectedSupplier(null)}
+			/>
+		</div>
+	);
+}
