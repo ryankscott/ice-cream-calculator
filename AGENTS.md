@@ -17,6 +17,9 @@ Write React components in TypeScript using functional components and hooks; avoi
 ## Component Library
 Use shadcn components whenever possible for consistent styling and behavior. The shadcn component library is already integrated in the project; available components are located in `/src/components/ui`. When building new features, import and compose shadcn components rather than creating custom implementations. This ensures a cohesive design system and reduces maintenance overhead.
 
+## Backend Endpoints & OpenAPI Specification
+All backend endpoints must be defined in the OpenAPI specification first, before implementing the backend logic. This ensures a contract-first approach that keeps the API well-documented and enables automatic code generation. Update the OpenAPI spec, then run the code generation script (see `scripts/generate-from-openapi.mjs`) to generate TypeScript types and validation schemas. Implement the service logic and route handlers to match the generated types and schemas.
+
 ## Testing Guidelines
 Use Vitest with Testing Library helpers for component behavior; import from `@testing-library/react` rather than shallow rendering. Place specs next to the code under test using the `.test.ts` or `.test.tsx` suffix (e.g., `ice-cream-card.test.tsx`). Cover stateful hooks and router loaders with focused tests, mocking network calls via `fetch` or lightweight fixtures in `src/data`. Aim to exercise new logic paths and keep CI green.
 
