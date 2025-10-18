@@ -35,3 +35,30 @@ export async function fetchIngredients(
 	const data = (await response.json()) as IngredientListResponse;
 	return data;
 }
+
+export async function updateIngredient(
+	ingredientId: string,
+	updates: Partial<Ingredient>,
+): Promise<Ingredient> {
+	const url = new URL(
+		`${API_BASE}/ingredients/${ingredientId}`,
+		window.location.origin,
+	);
+
+	const response = await fetch(url.toString(), {
+		method: "PUT",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify(updates),
+	});
+
+	if (!response.ok) {
+		const body = await response.json().catch(() => undefined);
+		throw new Error(body?.message ?? "Failed to update ingredient");
+	}
+
+	const data = (await response.json()) as Ingredient;
+	return data;
+}
