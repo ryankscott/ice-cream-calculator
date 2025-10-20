@@ -25,12 +25,16 @@ Use Vitest with Testing Library helpers for component behavior; import from `@te
 
 ## Work Tracking with BD
 Use BD (Beads) to track all work items and maintain visibility into the development process. Before starting work on a task:
-- Create an issue in BD using `bd create` with a clear title and description of what you're implementing
-- Set acceptance criteria and any relevant dependencies  
+- Find incomplete issues using `bd list` to identify work that needs attention
+- Create new issues in BD using `bd create` with a clear title and description of what you're implementing
+- Set acceptance criteria and any relevant dependencies
 - Claim the work by updating the issue status to `in_progress` using `bd update`
+- All subtasks and todos must be tracked as separate issues in Beads
+- Use `bd dep` to establish dependencies between related issues
 - Reference the issue ID in commit messages for traceability
+- Once complete, mark issues as closed using `bd close`
 
-Keep issues updated as you progress, marking them `blocked` if you hit dependencies and `closed` when complete. This creates a clear record of development decisions and work history for the team.
+Keep issues updated as you progress, marking them `blocked` if you hit dependencies. This creates a clear record of development decisions and work history for the team.
 
 ## Commit & Pull Request Guidelines
 Follow the existing history’s concise, imperative subject lines (e.g., `Fix typing`). Commit logical units separately and avoid bundling generated artifacts. Pull requests should describe the change, outline validation steps (`pnpm test`, `pnpm lint`), and link related issues. For UI updates, attach before/after screenshots or GIFs. Request review when all checks pass and outstanding comments are addressed.
