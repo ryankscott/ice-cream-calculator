@@ -1,5 +1,7 @@
 import { useId, useState } from "react";
+
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import {
 	Dialog,
 	DialogContent,
@@ -8,7 +10,15 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import type { Ingredient } from "@/lib/api/ingredients";
+import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useUpdateIngredient } from "@/lib/hooks/useUpdateIngredient";
 import { AllergenBadge, InfoGrid, InfoItem, Section } from "./dialog-helpers";
 import {
@@ -30,18 +40,37 @@ interface IngredientDetailDialogProps {
 	ingredient: IngredientWithSupplier | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	allIngredients?: Ingredient[];
 }
 
 export function IngredientDetailDialog({
 	ingredient,
 	open,
 	onOpenChange,
+	allIngredients = [],
 }: IngredientDetailDialogProps) {
 	const [editedName, setEditedName] = useState("");
+	const [editedCategory, setEditedCategory] = useState("");
+	const [editedType, setEditedType] = useState("");
+	const [editedStatus, setEditedStatus] = useState<"Active" | "Inactive">(
+		"Active",
+	);
+	const [editedBrand, setEditedBrand] = useState("");
+	const [editedSupplierId, setEditedSupplierId] = useState("");
+
 	const updateMutation = useUpdateIngredient();
+	const { data: suppliersData } = useSuppliers({ pageSize: 100 });
 	const ingredientNameId = useId();
 
 	if (!ingredient) return null;
+
+	// Get unique categories and types from all ingredients
+	const uniqueCategories = Array.from(
+		new Set(allIngredients.map((ing) => ing.category).filter(Boolean)),
+	).sort();
+	const uniqueTypes = Array.from(
+		new Set(allIngredients.map((ing) => ing.type).filter(Boolean)),
+	).sort();
 
 	const handleSave = async () => {
 		if (editedName.trim() === "") {
@@ -52,7 +81,14 @@ export function IngredientDetailDialog({
 		try {
 			await updateMutation.mutateAsync({
 				ingredientId: ingredient.id,
-				updates: { name: editedName },
+				updates: {
+					name: editedName,
+					category: editedCategory,
+					type: editedType,
+					status: editedStatus,
+					brand: editedBrand || null,
+					supplierId: editedSupplierId,
+				},
 			});
 			onOpenChange(false);
 		} catch (error) {
@@ -62,12 +98,22 @@ export function IngredientDetailDialog({
 
 	const handleCancel = () => {
 		setEditedName("");
+		setEditedCategory("");
+		setEditedType("");
+		setEditedStatus("Active");
+		setEditedBrand("");
+		setEditedSupplierId("");
 		onOpenChange(false);
 	};
 
-	// Initialize edited name when dialog opens
+	// Initialize edited fields when dialog opens
 	if (open && !editedName) {
 		setEditedName(ingredient.name);
+		setEditedCategory(ingredient.category);
+		setEditedType(ingredient.type);
+		setEditedStatus(ingredient.status);
+		setEditedBrand(ingredient.brand || "");
+		setEditedSupplierId(ingredient.supplierId);
 	}
 
 	return (
@@ -98,22 +144,72 @@ export function IngredientDetailDialog({
 						{/* Basic Information */}
 						<Section title="Basic Information">
 							<InfoGrid>
-								<InfoItem label="Category" value={ingredient.category} />
-								<InfoItem label="Type" value={ingredient.type} />
-								<InfoItem
-									label="Status"
-									value={ingredient.status}
-									badge={ingredient.status}
-								/>
-								{ingredient.brand && (
-									<InfoItem label="Brand" value={ingredient.brand} />
-								)}
-								{ingredient.supplierCode && (
-									<InfoItem
-										label="Supplier Code"
-										value={ingredient.supplierCode}
+								<div className="space-y-1">
+									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										Category
+									</p>
+									<Select
+										value={editedCategory}
+										onValueChange={setEditedCategory}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Select category" />
+										</SelectTrigger>
+										<SelectContent>
+											{uniqueCategories.map((cat) => (
+												<SelectItem key={cat} value={cat}>
+													{cat}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-1">
+									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										Type
+									</p>
+									<Select value={editedType} onValueChange={setEditedType}>
+										<SelectTrigger>
+											<SelectValue placeholder="Select type" />
+										</SelectTrigger>
+										<SelectContent>
+											{uniqueTypes.map((type) => (
+												<SelectItem key={type} value={type}>
+													{type}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-1">
+									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										Status
+									</p>
+									<Select
+										value={editedStatus}
+										onValueChange={(val) =>
+											setEditedStatus(val as "Active" | "Inactive")
+										}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Select status" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="Active">Active</SelectItem>
+											<SelectItem value="Inactive">Inactive</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-1">
+									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										Brand
+									</p>
+									<Input
+										value={editedBrand}
+										onChange={(e) => setEditedBrand(e.target.value)}
+										placeholder="Brand (optional)"
 									/>
-								)}
+								</div>
 							</InfoGrid>
 						</Section>
 
@@ -262,12 +358,23 @@ export function IngredientDetailDialog({
 						{/* Supplier Information */}
 						<Section title="Supplier">
 							<InfoGrid>
-								{ingredient.supplier && (
-									<InfoItem
-										label="Supplier Name"
-										value={ingredient.supplier.name}
+								<div className="space-y-1">
+									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										Supplier Name
+									</p>
+									<Combobox
+										value={editedSupplierId}
+										onValueChange={setEditedSupplierId}
+										items={
+											suppliersData?.data?.map((supplier) => ({
+												value: supplier.id,
+												label: supplier.name,
+											})) || []
+										}
+										placeholder="Select supplier..."
+										searchPlaceholder="Search suppliers..."
 									/>
-								)}
+								</div>
 								{ingredient.costPerPackInCentsExGst !== null &&
 									ingredient.costPerPackInCentsExGst !== undefined && (
 										<InfoItem

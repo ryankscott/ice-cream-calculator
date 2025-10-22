@@ -147,6 +147,7 @@ export function IngredientsTable() {
 				ingredient={selectedIngredient}
 				open={!!selectedIngredient}
 				onOpenChange={(open) => !open && setSelectedIngredient(null)}
+				allIngredients={ingredients}
 			/>
 		</div>
 	);
