@@ -1,7 +1,4 @@
-import { useId, useState } from "react";
-
 import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
 import {
 	Dialog,
 	DialogContent,
@@ -9,32 +6,18 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import type { Ingredient } from "@/lib/api/ingredients";
-import { useSuppliers } from "@/lib/hooks/useSuppliers";
-import { useUpdateIngredient } from "@/lib/hooks/useUpdateIngredient";
+import { AdditionalPropertiesSection } from "./AdditionalPropertiesSection";
+import { BasicInfoSection } from "./BasicInfoSection";
+import { CompositionSection } from "./CompositionSection";
 import { AllergenBadge, InfoGrid, InfoItem, Section } from "./dialog-helpers";
+import { formatDateWithTime } from "./ingredients-table.utils";
+import { NutritionalInfoSection } from "./NutritionalInfoSection";
+import { SupplierInfoSection } from "./SupplierInfoSection";
 import {
-	formatCurrency,
-	formatDateWithTime,
-	hasAdditionalProperties,
-	hasCompositionData,
-	hasNutritionalData,
-} from "./ingredients-table.utils";
-
-interface IngredientWithSupplier extends Ingredient {
-	supplier?: {
-		id: string;
-		name: string;
-	};
-}
+	type IngredientWithSupplier,
+	useIngredientForm,
+} from "./useIngredientForm";
 
 interface IngredientDetailDialogProps {
 	ingredient: IngredientWithSupplier | null;
@@ -49,72 +32,24 @@ export function IngredientDetailDialog({
 	onOpenChange,
 	allIngredients = [],
 }: IngredientDetailDialogProps) {
-	const [editedName, setEditedName] = useState("");
-	const [editedCategory, setEditedCategory] = useState("");
-	const [editedType, setEditedType] = useState("");
-	const [editedStatus, setEditedStatus] = useState<"Active" | "Inactive">(
-		"Active",
-	);
-	const [editedBrand, setEditedBrand] = useState("");
-	const [editedSupplierId, setEditedSupplierId] = useState("");
-
-	const updateMutation = useUpdateIngredient();
-	const { data: suppliersData } = useSuppliers({ pageSize: 100 });
-	const ingredientNameId = useId();
+	const {
+		state,
+		setFieldValue,
+		handleSave,
+		handleCancel,
+		isSaving,
+		supplierOptions,
+		uniqueCategories,
+		uniqueTypes,
+		calculatedPac,
+	} = useIngredientForm({
+		ingredient,
+		open,
+		onOpenChange,
+		allIngredients,
+	});
 
 	if (!ingredient) return null;
-
-	// Get unique categories and types from all ingredients
-	const uniqueCategories = Array.from(
-		new Set(allIngredients.map((ing) => ing.category).filter(Boolean)),
-	).sort();
-	const uniqueTypes = Array.from(
-		new Set(allIngredients.map((ing) => ing.type).filter(Boolean)),
-	).sort();
-
-	const handleSave = async () => {
-		if (editedName.trim() === "") {
-			// Don't save if name is empty
-			return;
-		}
-
-		try {
-			await updateMutation.mutateAsync({
-				ingredientId: ingredient.id,
-				updates: {
-					name: editedName,
-					category: editedCategory,
-					type: editedType,
-					status: editedStatus,
-					brand: editedBrand || null,
-					supplierId: editedSupplierId,
-				},
-			});
-			onOpenChange(false);
-		} catch (error) {
-			console.error("Failed to update ingredient:", error);
-		}
-	};
-
-	const handleCancel = () => {
-		setEditedName("");
-		setEditedCategory("");
-		setEditedType("");
-		setEditedStatus("Active");
-		setEditedBrand("");
-		setEditedSupplierId("");
-		onOpenChange(false);
-	};
-
-	// Initialize edited fields when dialog opens
-	if (open && !editedName) {
-		setEditedName(ingredient.name);
-		setEditedCategory(ingredient.category);
-		setEditedType(ingredient.type);
-		setEditedStatus(ingredient.status);
-		setEditedBrand(ingredient.brand || "");
-		setEditedSupplierId(ingredient.supplierId);
-	}
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,315 +59,43 @@ export function IngredientDetailDialog({
 				</DialogHeader>
 
 				<div className="space-y-4 pb-20">
-					<div>
-						<label
-							htmlFor={ingredientNameId}
-							className="text-sm font-medium mb-2 block"
-						>
-							Ingredient Name
-						</label>
-						<Input
-							id={ingredientNameId}
-							value={editedName}
-							onChange={(e) => setEditedName(e.target.value)}
-							autoFocus
-							placeholder="Ingredient name"
-						/>
-					</div>
-
 					<div className="space-y-6">
 						{/* Basic Information */}
-						<Section title="Basic Information">
-							<InfoGrid>
-								<div className="space-y-1">
-									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Category
-									</p>
-									<Select
-										value={editedCategory}
-										onValueChange={setEditedCategory}
-									>
-										<SelectTrigger>
-											<SelectValue placeholder="Select category" />
-										</SelectTrigger>
-										<SelectContent>
-											{uniqueCategories.map((cat) => (
-												<SelectItem key={cat} value={cat}>
-													{cat}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="space-y-1">
-									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Type
-									</p>
-									<Select value={editedType} onValueChange={setEditedType}>
-										<SelectTrigger>
-											<SelectValue placeholder="Select type" />
-										</SelectTrigger>
-										<SelectContent>
-											{uniqueTypes.map((type) => (
-												<SelectItem key={type} value={type}>
-													{type}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="space-y-1">
-									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Status
-									</p>
-									<Select
-										value={editedStatus}
-										onValueChange={(val) =>
-											setEditedStatus(val as "Active" | "Inactive")
-										}
-									>
-										<SelectTrigger>
-											<SelectValue placeholder="Select status" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="Active">Active</SelectItem>
-											<SelectItem value="Inactive">Inactive</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="space-y-1">
-									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Brand
-									</p>
-									<Input
-										value={editedBrand}
-										onChange={(e) => setEditedBrand(e.target.value)}
-										placeholder="Brand (optional)"
-									/>
-								</div>
-							</InfoGrid>
-						</Section>
+						<BasicInfoSection
+							state={state}
+							setFieldValue={setFieldValue}
+							uniqueCategories={uniqueCategories}
+							uniqueTypes={uniqueTypes}
+						/>
 
 						{/* Nutritional Information */}
-						{hasNutritionalData(ingredient) && (
-							<Section title="Nutritional Information (per 100g)">
-								<InfoGrid>
-									{ingredient.energyPer100g !== null &&
-										ingredient.energyPer100g !== undefined && (
-											<InfoItem
-												label="Energy"
-												value={`${ingredient.energyPer100g} kcal`}
-											/>
-										)}
-									{ingredient.proteinPer100g !== null &&
-										ingredient.proteinPer100g !== undefined && (
-											<InfoItem
-												label="Protein"
-												value={`${ingredient.proteinPer100g}g`}
-											/>
-										)}
-									{ingredient.totalFatPer100g !== null &&
-										ingredient.totalFatPer100g !== undefined && (
-											<InfoItem
-												label="Total Fat"
-												value={`${ingredient.totalFatPer100g}g`}
-											/>
-										)}
-									{ingredient.saturatedFatPer100g !== null &&
-										ingredient.saturatedFatPer100g !== undefined && (
-											<InfoItem
-												label="Saturated Fat"
-												value={`${ingredient.saturatedFatPer100g}g`}
-											/>
-										)}
-									{ingredient.totalCarbPer100g !== null &&
-										ingredient.totalCarbPer100g !== undefined && (
-											<InfoItem
-												label="Total Carbohydrates"
-												value={`${ingredient.totalCarbPer100g}g`}
-											/>
-										)}
-									{ingredient.totalSugarsPer100g !== null &&
-										ingredient.totalSugarsPer100g !== undefined && (
-											<InfoItem
-												label="Total Sugars"
-												value={`${ingredient.totalSugarsPer100g}g`}
-											/>
-										)}
-									{ingredient.sodiumMgPer100g !== null &&
-										ingredient.sodiumMgPer100g !== undefined && (
-											<InfoItem
-												label="Sodium"
-												value={`${ingredient.sodiumMgPer100g}mg`}
-											/>
-										)}
-								</InfoGrid>
-							</Section>
-						)}
+						<NutritionalInfoSection
+							ingredient={ingredient}
+							state={state}
+							setFieldValue={setFieldValue}
+						/>
 
 						{/* Composition Details */}
-						{hasCompositionData(ingredient) && (
-							<Section title="Composition Details">
-								<InfoGrid>
-									{ingredient.waterPer100g !== null &&
-										ingredient.waterPer100g !== undefined && (
-											<InfoItem
-												label="Water"
-												value={`${ingredient.waterPer100g}g`}
-											/>
-										)}
-									{ingredient.totalSolidsPer100g !== null &&
-										ingredient.totalSolidsPer100g !== undefined && (
-											<InfoItem
-												label="Total Solids"
-												value={`${ingredient.totalSolidsPer100g}g`}
-											/>
-										)}
-									{ingredient.msnfPer100g !== null &&
-										ingredient.msnfPer100g !== undefined && (
-											<InfoItem
-												label="MSNF"
-												value={`${ingredient.msnfPer100g}g`}
-											/>
-										)}
-									{ingredient.dryCocoaSolidsPer100g !== null &&
-										ingredient.dryCocoaSolidsPer100g !== undefined && (
-											<InfoItem
-												label="Dry Cocoa Solids"
-												value={`${ingredient.dryCocoaSolidsPer100g}g`}
-											/>
-										)}
-									{ingredient.cocoaButterPer100g !== null &&
-										ingredient.cocoaButterPer100g !== undefined && (
-											<InfoItem
-												label="Cocoa Butter"
-												value={`${ingredient.cocoaButterPer100g}g`}
-											/>
-										)}
-									{ingredient.sucrosePer100g !== null &&
-										ingredient.sucrosePer100g !== undefined && (
-											<InfoItem
-												label="Sucrose"
-												value={`${ingredient.sucrosePer100g}g`}
-											/>
-										)}
-									{ingredient.glucosePer100g !== null &&
-										ingredient.glucosePer100g !== undefined && (
-											<InfoItem
-												label="Glucose"
-												value={`${ingredient.glucosePer100g}g`}
-											/>
-										)}
-									{ingredient.fructosePer100g !== null &&
-										ingredient.fructosePer100g !== undefined && (
-											<InfoItem
-												label="Fructose"
-												value={`${ingredient.fructosePer100g}g`}
-											/>
-										)}
-									{ingredient.otherSugarsPer100g !== null &&
-										ingredient.otherSugarsPer100g !== undefined && (
-											<InfoItem
-												label="Other Sugars"
-												value={`${ingredient.otherSugarsPer100g}g`}
-											/>
-										)}
-									{ingredient.alcoholPer100g !== null &&
-										ingredient.alcoholPer100g !== undefined && (
-											<InfoItem
-												label="Alcohol"
-												value={`${ingredient.alcoholPer100g}g`}
-											/>
-										)}
-									{ingredient.otherSolidsPer100g !== null &&
-										ingredient.otherSolidsPer100g !== undefined && (
-											<InfoItem
-												label="Other Solids"
-												value={`${ingredient.otherSolidsPer100g}g`}
-											/>
-										)}
-								</InfoGrid>
-							</Section>
-						)}
+						<CompositionSection
+							ingredient={ingredient}
+							state={state}
+							setFieldValue={setFieldValue}
+						/>
 
 						{/* Supplier Information */}
-						<Section title="Supplier">
-							<InfoGrid>
-								<div className="space-y-1">
-									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Supplier Name
-									</p>
-									<Combobox
-										value={editedSupplierId}
-										onValueChange={setEditedSupplierId}
-										items={
-											suppliersData?.data?.map((supplier) => ({
-												value: supplier.id,
-												label: supplier.name,
-											})) || []
-										}
-										placeholder="Select supplier..."
-										searchPlaceholder="Search suppliers..."
-									/>
-								</div>
-								{ingredient.costPerPackInCentsExGst !== null &&
-									ingredient.costPerPackInCentsExGst !== undefined && (
-										<InfoItem
-											label="Cost per Pack"
-											value={formatCurrency(ingredient.costPerPackInCentsExGst)}
-										/>
-									)}
-								{ingredient.costPer1000gInCentsExGst !== null &&
-									ingredient.costPer1000gInCentsExGst !== undefined && (
-										<InfoItem
-											label="Cost per 1000g"
-											value={formatCurrency(
-												ingredient.costPer1000gInCentsExGst,
-											)}
-										/>
-									)}
-								{ingredient.packageSizeInGrams !== null &&
-									ingredient.packageSizeInGrams !== undefined && (
-										<InfoItem
-											label="Package Size"
-											value={`${ingredient.packageSizeInGrams}g`}
-										/>
-									)}
-								{ingredient.percentOfUsefulProduct !== null &&
-									ingredient.percentOfUsefulProduct !== undefined && (
-										<InfoItem
-											label="Useful Product %"
-											value={`${ingredient.percentOfUsefulProduct}%`}
-										/>
-									)}
-							</InfoGrid>
-						</Section>
+						<SupplierInfoSection
+							state={state}
+							setFieldValue={setFieldValue}
+							supplierOptions={supplierOptions}
+						/>
 
 						{/* Additional Properties */}
-						{hasAdditionalProperties(ingredient) && (
-							<Section title="Additional Properties">
-								<InfoGrid>
-									{ingredient.hf !== null && ingredient.hf !== undefined && (
-										<InfoItem
-											label="Hardness Factor"
-											value={String(ingredient.hf)}
-										/>
-									)}
-									{ingredient.pac !== null && ingredient.pac !== undefined && (
-										<InfoItem label="PAC" value={String(ingredient.pac)} />
-									)}
-									{ingredient.pod !== null && ingredient.pod !== undefined && (
-										<InfoItem label="POD" value={String(ingredient.pod)} />
-									)}
-									{ingredient.foodCompositionId && (
-										<InfoItem
-											label="Food Composition ID"
-											value={ingredient.foodCompositionId}
-										/>
-									)}
-								</InfoGrid>
-							</Section>
-						)}
+						<AdditionalPropertiesSection
+							ingredient={ingredient}
+							state={state}
+							setFieldValue={setFieldValue}
+							calculatedPac={calculatedPac}
+						/>
 
 						{/* Allergens */}
 						{ingredient.allergens &&
@@ -475,12 +138,8 @@ export function IngredientDetailDialog({
 					<Button type="button" variant="outline" onClick={handleCancel}>
 						Cancel
 					</Button>
-					<Button
-						type="button"
-						onClick={handleSave}
-						disabled={updateMutation.isPending}
-					>
-						{updateMutation.isPending ? "Saving..." : "Save changes"}
+					<Button type="button" onClick={handleSave} disabled={isSaving}>
+						{isSaving ? "Saving..." : "Save changes"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>
