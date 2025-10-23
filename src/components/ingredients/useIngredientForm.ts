@@ -195,6 +195,51 @@ export function calculatePAC(state: IngredientFormState): number {
 	return Math.round(pac * 100) / 100;
 }
 
+export function calculateCostPer1000gInCentsExGst({
+	costPerPackInCentsExGst,
+	packageSizeInGrams,
+	percentOfUsefulProduct,
+}: Pick<
+	IngredientFormState,
+	"costPerPackInCentsExGst" | "packageSizeInGrams" | "percentOfUsefulProduct"
+>): number | null {
+	if (
+		costPerPackInCentsExGst === null ||
+		costPerPackInCentsExGst === undefined
+	) {
+		return null;
+	}
+
+	if (packageSizeInGrams === null || packageSizeInGrams === undefined) {
+		return null;
+	}
+
+	if (packageSizeInGrams <= 0) {
+		return null;
+	}
+
+	let usefulFraction = 1;
+	if (percentOfUsefulProduct !== null && percentOfUsefulProduct !== undefined) {
+		if (percentOfUsefulProduct <= 0) {
+			return null;
+		}
+		usefulFraction = percentOfUsefulProduct / 100;
+	}
+
+	const usableGrams = packageSizeInGrams * usefulFraction;
+	if (!Number.isFinite(usableGrams) || usableGrams <= 0) {
+		return null;
+	}
+
+	const costPerGram = costPerPackInCentsExGst / usableGrams;
+	const costPer1000g = costPerGram * 1000;
+	if (!Number.isFinite(costPer1000g)) {
+		return null;
+	}
+
+	return Math.round(costPer1000g);
+}
+
 interface UseIngredientFormParams {
 	ingredient: IngredientWithSupplier | null;
 	open: boolean;
@@ -236,6 +281,19 @@ export function useIngredientForm({
 	}, [onOpenChange]);
 
 	const calculatedPac = useMemo(() => calculatePAC(state), [state]);
+	const calculatedCostPer1000gInCentsExGst = useMemo(
+		() =>
+			calculateCostPer1000gInCentsExGst({
+				costPerPackInCentsExGst: state.costPerPackInCentsExGst,
+				packageSizeInGrams: state.packageSizeInGrams,
+				percentOfUsefulProduct: state.percentOfUsefulProduct,
+			}),
+		[
+			state.costPerPackInCentsExGst,
+			state.packageSizeInGrams,
+			state.percentOfUsefulProduct,
+		],
+	);
 
 	const supplierOptions = useMemo(
 		() =>
@@ -305,7 +363,7 @@ export function useIngredientForm({
 					pod: state.pod,
 					packageSizeInGrams: state.packageSizeInGrams,
 					costPerPackInCentsExGst: state.costPerPackInCentsExGst,
-					costPer1000gInCentsExGst: state.costPer1000gInCentsExGst,
+					costPer1000gInCentsExGst: calculatedCostPer1000gInCentsExGst,
 					percentOfUsefulProduct: state.percentOfUsefulProduct,
 					supplierCode: state.supplierCode ? state.supplierCode : null,
 					foodCompositionId: state.foodCompositionId
@@ -317,7 +375,14 @@ export function useIngredientForm({
 		} catch (error) {
 			console.error("Failed to update ingredient:", error);
 		}
-	}, [calculatedPac, ingredient, onOpenChange, state, updateMutation]);
+	}, [
+		calculatedCostPer1000gInCentsExGst,
+		calculatedPac,
+		ingredient,
+		onOpenChange,
+		state,
+		updateMutation,
+	]);
 
 	return {
 		state,
@@ -329,5 +394,6 @@ export function useIngredientForm({
 		uniqueCategories,
 		uniqueTypes,
 		calculatedPac,
+		calculatedCostPer1000gInCentsExGst,
 	};
 }

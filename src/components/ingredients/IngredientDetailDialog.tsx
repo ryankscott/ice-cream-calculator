@@ -42,6 +42,7 @@ export function IngredientDetailDialog({
 		uniqueCategories,
 		uniqueTypes,
 		calculatedPac,
+		calculatedCostPer1000gInCentsExGst,
 	} = useIngredientForm({
 		ingredient,
 		open,
@@ -87,6 +88,9 @@ export function IngredientDetailDialog({
 							state={state}
 							setFieldValue={setFieldValue}
 							supplierOptions={supplierOptions}
+							calculatedCostPer1000gInCentsExGst={
+								calculatedCostPer1000gInCentsExGst
+							}
 						/>
 
 						{/* Additional Properties */}

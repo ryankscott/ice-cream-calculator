@@ -9,5 +9,9 @@ count.txt
 .tanstack
 .output
 .vinxi
-todos.json
-.beads
+
+
+*.log
+*.pid 
+*.db-wal 
+*.db-shm

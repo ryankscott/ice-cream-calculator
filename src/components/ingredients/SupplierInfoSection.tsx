@@ -2,6 +2,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { InfoGrid, Section } from "./dialog-helpers";
 import { SUPPLIER_NUMBER_FIELDS } from "./field-configs";
+import { formatCurrency } from "./ingredients-table.utils";
 import type { IngredientFormState } from "./useIngredientForm";
 
 interface SupplierInfoSectionProps {
@@ -11,6 +12,7 @@ interface SupplierInfoSectionProps {
 		value: IngredientFormState[K],
 	) => void;
 	supplierOptions: Array<{ value: string; label: string }>;
+	calculatedCostPer1000gInCentsExGst: number | null;
 }
 
 function NumberField({
@@ -46,7 +48,13 @@ export function SupplierInfoSection({
 	state,
 	setFieldValue,
 	supplierOptions,
+	calculatedCostPer1000gInCentsExGst,
 }: SupplierInfoSectionProps) {
+	const formattedCostPer1000g =
+		calculatedCostPer1000gInCentsExGst === null
+			? ""
+			: formatCurrency(calculatedCostPer1000gInCentsExGst);
+
 	return (
 		<Section title="Supplier">
 			<InfoGrid>
@@ -81,6 +89,19 @@ export function SupplierInfoSection({
 						placeholder={field.placeholder}
 					/>
 				))}
+				<div className="space-y-1">
+					<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+						Cost per 1000g
+					</p>
+					<Input
+						value={formattedCostPer1000g}
+						readOnly
+						placeholder="Enter pack details to calculate"
+					/>
+					<p className="text-xs text-muted-foreground">
+						Calculated from pack cost, size, and useful product %.
+					</p>
+				</div>
 			</InfoGrid>
 		</Section>
 	);

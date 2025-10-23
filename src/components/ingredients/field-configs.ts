@@ -40,7 +40,6 @@ export const COMPOSITION_FIELDS: NumberFieldConfig[] = [
 export const SUPPLIER_NUMBER_FIELDS: NumberFieldConfig[] = [
 	{ key: "packageSizeInGrams", label: "Package Size (g)" },
 	{ key: "costPerPackInCentsExGst", label: "Cost per Pack (¢)" },
-	{ key: "costPer1000gInCentsExGst", label: "Cost per 1000g (¢)" },
 	{ key: "percentOfUsefulProduct", label: "Useful Product (%)" },
 ];
 
