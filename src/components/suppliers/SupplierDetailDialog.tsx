@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useReducer } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import type { Supplier } from "@/lib/api/suppliers";
 import { useUpdateSupplier } from "@/lib/hooks/useUpdateSupplier";
 import { InfoGrid, InfoItem, Section } from "./dialog-helpers";
-import { formatDateWithTime, hasContactInfo } from "./suppliers-table.utils";
+import { formatDateWithTime } from "./suppliers-table.utils";
 
 interface SupplierDetailDialogProps {
 	supplier: Supplier | null;
@@ -20,16 +20,53 @@ interface SupplierDetailDialogProps {
 	onOpenChange: (open: boolean) => void;
 }
 
+type SupplierFormState = {
+	name: string;
+	email: string;
+	phone: string;
+	address: string;
+	website: string;
+};
+
+type SupplierFormAction =
+	| { type: "setField"; field: keyof SupplierFormState; value: string }
+	| { type: "reset"; supplier: Supplier | null };
+
+const createStateFromSupplier = (
+	supplier: Supplier | null,
+): SupplierFormState => ({
+	name: supplier?.name ?? "",
+	email: supplier?.email ?? "",
+	phone: supplier?.phone ?? "",
+	address: supplier?.address ?? "",
+	website: supplier?.website ?? "",
+});
+
+function supplierFormReducer(
+	state: SupplierFormState,
+	action: SupplierFormAction,
+): SupplierFormState {
+	switch (action.type) {
+		case "setField":
+			return { ...state, [action.field]: action.value };
+		case "reset":
+			return createStateFromSupplier(action.supplier);
+		default:
+			return state;
+	}
+}
+
 export function SupplierDetailDialog({
 	supplier,
 	open,
 	onOpenChange,
 }: SupplierDetailDialogProps) {
-	const [editedName, setEditedName] = useState("");
-	const [editedEmail, setEditedEmail] = useState("");
-	const [editedPhone, setEditedPhone] = useState("");
-	const [editedAddress, setEditedAddress] = useState("");
-	const [editedWebsite, setEditedWebsite] = useState("");
+	const [formState, dispatch] = useReducer(
+		supplierFormReducer,
+		supplier,
+		createStateFromSupplier,
+	);
+	const { name, email, phone, address, website } = formState;
 
 	const updateMutation = useUpdateSupplier();
 	const supplierNameId = useId();
@@ -38,10 +75,18 @@ export function SupplierDetailDialog({
 	const supplierAddressId = useId();
 	const supplierWebsiteId = useId();
 
+	useEffect(() => {
+		if (!open || !supplier) {
+			return;
+		}
+
+		dispatch({ type: "reset", supplier });
+	}, [open, supplier]);
+
 	if (!supplier) return null;
 
 	const handleSave = async () => {
-		if (editedName.trim() === "") {
+		if (name.trim() === "") {
 			// Don't save if name is empty
 			return;
 		}
@@ -50,14 +95,14 @@ export function SupplierDetailDialog({
 			await updateMutation.mutateAsync({
 				supplierId: supplier.id,
 				updates: {
-					name: editedName,
-					email: editedEmail || null,
-					phone: editedPhone || null,
-					address: editedAddress || null,
-					website: editedWebsite || null,
+					name,
+					email: email || null,
+					phone: phone || null,
+					address: address || null,
+					website: website || null,
 				},
 			});
-			toast.success(`${editedName} updated successfully`);
+			toast.success(`${name} updated successfully`);
 			onOpenChange(false);
 		} catch (error) {
 			const errorMessage =
@@ -68,22 +113,8 @@ export function SupplierDetailDialog({
 	};
 
 	const handleCancel = () => {
-		setEditedName("");
-		setEditedEmail("");
-		setEditedPhone("");
-		setEditedAddress("");
-		setEditedWebsite("");
 		onOpenChange(false);
 	};
-
-	// Initialize edited fields when dialog opens
-	if (open && !editedName) {
-		setEditedName(supplier.name);
-		setEditedEmail(supplier.email || "");
-		setEditedPhone(supplier.phone || "");
-		setEditedAddress(supplier.address || "");
-		setEditedWebsite(supplier.website || "");
-	}
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,8 +133,14 @@ export function SupplierDetailDialog({
 						</label>
 						<Input
 							id={supplierNameId}
-							value={editedName}
-							onChange={(e) => setEditedName(e.target.value)}
+							value={name}
+							onChange={(event) =>
+								dispatch({
+									type: "setField",
+									field: "name",
+									value: event.target.value,
+								})
+							}
 							autoFocus
 							placeholder="Supplier name"
 						/>
@@ -123,8 +160,14 @@ export function SupplierDetailDialog({
 									<Input
 										id={supplierEmailId}
 										type="email"
-										value={editedEmail}
-										onChange={(e) => setEditedEmail(e.target.value)}
+										value={email}
+										onChange={(event) =>
+											dispatch({
+												type: "setField",
+												field: "email",
+												value: event.target.value,
+											})
+										}
 										placeholder="email@example.com"
 									/>
 								</div>
@@ -138,8 +181,14 @@ export function SupplierDetailDialog({
 									</label>
 									<Input
 										id={supplierPhoneId}
-										value={editedPhone}
-										onChange={(e) => setEditedPhone(e.target.value)}
+										value={phone}
+										onChange={(event) =>
+											dispatch({
+												type: "setField",
+												field: "phone",
+												value: event.target.value,
+											})
+										}
 										placeholder="+1 (555) 123-4567"
 									/>
 								</div>
@@ -153,8 +202,14 @@ export function SupplierDetailDialog({
 									</label>
 									<Input
 										id={supplierAddressId}
-										value={editedAddress}
-										onChange={(e) => setEditedAddress(e.target.value)}
+										value={address}
+										onChange={(event) =>
+											dispatch({
+												type: "setField",
+												field: "address",
+												value: event.target.value,
+											})
+										}
 										placeholder="123 Main St, City, State 12345"
 									/>
 								</div>
@@ -168,33 +223,19 @@ export function SupplierDetailDialog({
 									</label>
 									<Input
 										id={supplierWebsiteId}
-										value={editedWebsite}
-										onChange={(e) => setEditedWebsite(e.target.value)}
+										value={website}
+										onChange={(event) =>
+											dispatch({
+												type: "setField",
+												field: "website",
+												value: event.target.value,
+											})
+										}
 										placeholder="https://example.com"
 									/>
 								</div>
 							</div>
 						</Section>
-
-						{/* Display Current Information */}
-						{hasContactInfo(supplier) && (
-							<Section title="Current Information">
-								<InfoGrid>
-									{supplier.email && (
-										<InfoItem label="Email" value={supplier.email} />
-									)}
-									{supplier.phone && (
-										<InfoItem label="Phone" value={supplier.phone} />
-									)}
-									{supplier.address && (
-										<InfoItem label="Address" value={supplier.address} />
-									)}
-									{supplier.website && (
-										<InfoItem label="Website" value={supplier.website} />
-									)}
-								</InfoGrid>
-							</Section>
-						)}
 
 						{/* Metadata */}
 						<Section title="Metadata">
