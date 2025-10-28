@@ -46,8 +46,8 @@ describeIf("IngredientService", () => {
 
 	afterEach(async () => {
 		if (!dataSource.isInitialized) return;
-		await dataSource.getRepository(Ingredient).delete({});
-		await dataSource.getRepository(Supplier).delete({});
+		await dataSource.getRepository(Ingredient).clear();
+		await dataSource.getRepository(Supplier).clear();
 	});
 
 	afterAll(async () => {

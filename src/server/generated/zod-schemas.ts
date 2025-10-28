@@ -121,6 +121,70 @@ const SupplierCreateInput = SupplierBase;
 const SupplierUpdateInput = SupplierBase.and(
 	z.object({ id: SupplierId.uuid() }).strict().passthrough(),
 );
+const RecipeType = z.enum(["MilkBased", "FruitBased", "FruitWithFat"]);
+const RecipeIngredient = z
+	.object({ ingredientId: IngredientId.uuid(), quantityInGrams: z.number() })
+	.strict()
+	.passthrough();
+const RecipeInputParameters = z
+	.object({
+		desiredPac: z.number(),
+		desiredPacFromLactose: z.number(),
+		desiredPacFromSucrose: z.number(),
+		goalFatGramsPerBatch: z.number(),
+		fatFromMilkPer100g: z.number(),
+		goalMsnf: z.number(),
+		neutroAmount: z.number(),
+	})
+	.strict()
+	.passthrough();
+const RecipeBase = z
+	.object({
+		name: z.string(),
+		type: RecipeType,
+		notes: z.string().nullish(),
+		ingredients: z.array(RecipeIngredient).min(1),
+		inputParameters: RecipeInputParameters,
+	})
+	.strict()
+	.passthrough();
+const RecipeId = z.string();
+const RecipeCalculatedOutputs = z
+	.object({
+		totalDextroseToAdd: z.number(),
+		creamToAddInGrams: z.number(),
+		skimMilkPowderToAddInGrams: z.number(),
+		milkOrWaterToAddInGrams: z.number(),
+	})
+	.strict()
+	.passthrough();
+const Recipe = RecipeBase.and(
+	z
+		.object({
+			id: RecipeId.uuid(),
+			calculatedOutputs: RecipeCalculatedOutputs.optional(),
+			createdAt: DateTime.datetime({ offset: true }),
+			lastModifiedAt: DateTime.datetime({ offset: true }),
+		})
+		.strict()
+		.passthrough(),
+);
+const RecipeListResponse = z
+	.object({
+		data: z.array(Recipe),
+		meta: z
+			.object({ totalItems: z.number().int().gte(0) })
+			.strict()
+			.passthrough(),
+	})
+	.strict()
+	.passthrough();
+const RecipeCreateInput = RecipeBase.and(
+	z.object({ id: RecipeId.uuid() }).strict().passthrough(),
+);
+const RecipeUpdateInput = RecipeBase.and(
+	z.object({ id: RecipeId.uuid() }).strict().passthrough(),
+);
 
 export const schemas = {
 	SupplierId,
@@ -140,4 +204,14 @@ export const schemas = {
 	SupplierListResponse,
 	SupplierCreateInput,
 	SupplierUpdateInput,
+	RecipeType,
+	RecipeIngredient,
+	RecipeInputParameters,
+	RecipeBase,
+	RecipeId,
+	RecipeCalculatedOutputs,
+	Recipe,
+	RecipeListResponse,
+	RecipeCreateInput,
+	RecipeUpdateInput,
 };

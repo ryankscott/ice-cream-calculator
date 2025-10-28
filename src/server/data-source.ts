@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { DataSource } from "typeorm";
 
 import { Ingredient } from "./entities/Ingredient";
+import { Recipe } from "./entities/Recipe";
 import { Supplier } from "./entities/Supplier";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,7 +19,7 @@ const databaseFile =
 export const AppDataSource = new DataSource({
 	type: "sqlite",
 	database: databaseFile,
-	entities: [Supplier, Ingredient],
+	entities: [Supplier, Ingredient, Recipe],
 	migrations: [path.join(__dirname, "migrations", "*.{ts,js}")],
 	migrationsTableName: "migrations",
 	logging: false,

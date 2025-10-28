@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { IngredientsTable } from "@/components/ingredients/IngredientsTable";
+import { RecipesTable } from "@/components/recipes/RecipesTable";
 import { SuppliersTable } from "@/components/suppliers/SuppliersTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/")({
 	component: App,
 });
 
-type TabValue = "ingredients" | "suppliers";
+type TabValue = "ingredients" | "suppliers" | "recipes";
 
 function App() {
 	const [activeTab, setActiveTab] = useState<TabValue>("ingredients");
@@ -29,6 +30,7 @@ function App() {
 					<TabsList>
 						<TabsTrigger value="ingredients">Ingredients</TabsTrigger>
 						<TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+						<TabsTrigger value="recipes">Recipes</TabsTrigger>
 					</TabsList>
 
 					<TabsContent value="ingredients" className="mt-6">
@@ -37,6 +39,10 @@ function App() {
 
 					<TabsContent value="suppliers" className="mt-6">
 						<SuppliersTable />
+					</TabsContent>
+
+					<TabsContent value="recipes" className="mt-6">
+						<RecipesTable />
 					</TabsContent>
 				</Tabs>
 			</div>

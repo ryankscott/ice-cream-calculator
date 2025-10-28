@@ -121,6 +121,17 @@ async function generateTypeOrmArtifacts(spec) {
   const supplierSchema = resolveSchema(schemas, 'Supplier')
   const ingredientSchema = resolveSchema(schemas, 'Ingredient')
   const ingredientStatus = resolveSchema(schemas, 'IngredientStatus')
+  const recipeSchema = resolveSchema(schemas, 'Recipe')
+  const recipeTypeSchema = resolveSchema(schemas, 'RecipeType')
+  const recipeIngredientSchema = resolveSchema(schemas, 'RecipeIngredient')
+  const recipeInputParametersSchema = resolveSchema(
+    schemas,
+    'RecipeInputParameters',
+  )
+  const recipeCalculatedOutputsSchema = resolveSchema(
+    schemas,
+    'RecipeCalculatedOutputs',
+  )
 
   await fs.writeFile(
     path.join(ENTITIES_DIR, 'Supplier.ts'),
@@ -135,11 +146,23 @@ async function generateTypeOrmArtifacts(spec) {
   )
 
   await fs.writeFile(
+    path.join(ENTITIES_DIR, 'Recipe.ts'),
+    buildRecipeEntity(
+      recipeSchema,
+      recipeTypeSchema,
+      recipeIngredientSchema,
+      recipeInputParametersSchema,
+      recipeCalculatedOutputsSchema,
+    ),
+    'utf8',
+  )
+
+  await fs.writeFile(
     path.join(
       MIGRATIONS_DIR,
       '1710000000000-CreateSuppliersAndIngredients.ts',
     ),
-    buildMigration(),
+    buildMigration(ingredientStatus.enum, recipeTypeSchema.enum),
     'utf8',
   )
 }
@@ -422,7 +445,139 @@ export class Ingredient {
 `
 }
 
-function buildMigration() {
+function buildRecipeEntity(
+  recipeSchema,
+  recipeTypeSchema,
+  recipeIngredientSchema,
+  recipeInputParametersSchema,
+  recipeCalculatedOutputsSchema,
+) {
+  ensureProperties(recipeSchema, [
+    'id',
+    'name',
+    'type',
+    'notes',
+    'ingredients',
+    'inputParameters',
+    'calculatedOutputs',
+    'createdAt',
+    'lastModifiedAt',
+  ])
+
+  ensureProperties(recipeIngredientSchema, ['ingredientId', 'quantityInGrams'])
+
+  ensureProperties(recipeInputParametersSchema, [
+    'desiredPac',
+    'desiredPacFromLactose',
+    'desiredPacFromSucrose',
+    'goalFatGramsPerBatch',
+    'fatFromMilkPer100g',
+    'goalMsnf',
+    'neutroAmount',
+  ])
+
+  ensureProperties(recipeCalculatedOutputsSchema, [
+    'totalDextroseToAdd',
+    'creamToAddInGrams',
+    'skimMilkPowderToAddInGrams',
+    'milkOrWaterToAddInGrams',
+  ])
+
+  const recipeTypeEnum = recipeTypeSchema.enum
+  if (!Array.isArray(recipeTypeEnum) || recipeTypeEnum.length === 0) {
+    throw new Error('RecipeType enum is not defined in the OpenAPI spec.')
+  }
+
+  const recipeTypeLiteral = recipeTypeEnum.map((value) => `'${value}'`).join(' | ')
+  const recipeTypeCheck = recipeTypeEnum.map((value) => `'${value}'`).join(',')
+
+  return `import { Check, Column, Entity, Index, PrimaryColumn } from 'typeorm'
+
+export type RecipeType = ${recipeTypeLiteral}
+
+export interface RecipeIngredient {
+  ingredientId: string
+  quantityInGrams: number
+}
+
+export interface RecipeInputParameters {
+  desiredPac: number
+  desiredPacFromLactose: number
+  desiredPacFromSucrose: number
+  goalFatGramsPerBatch: number
+  fatFromMilkPer100g: number
+  goalMsnf: number
+  neutroAmount: number
+}
+
+export interface RecipeCalculatedOutputs {
+  totalDextroseToAdd: number
+  creamToAddInGrams: number
+  skimMilkPowderToAddInGrams: number
+  milkOrWaterToAddInGrams: number
+}
+
+@Entity({ name: 'recipes' })
+@Check("type IN (${recipeTypeCheck})")
+@Index('idx_recipes_type', ['type'])
+export class Recipe {
+  @PrimaryColumn('text')
+  id!: string
+
+  @Column({ type: 'text' })
+  name!: string
+
+  @Column({ type: 'text' })
+  type!: RecipeType
+
+  @Column({ type: 'text', nullable: true })
+  notes!: string | null
+
+  @Column({ type: 'simple-json', name: 'ingredients' })
+  ingredients!: RecipeIngredient[]
+
+  @Column({ type: 'simple-json', name: 'input_parameters' })
+  inputParameters!: RecipeInputParameters
+
+  @Column({
+    type: 'simple-json',
+    name: 'calculated_outputs',
+    nullable: true,
+  })
+  calculatedOutputs!: RecipeCalculatedOutputs | null
+
+  @Column({
+    type: 'text',
+    name: 'created_at',
+    default: () => "datetime('now')",
+  })
+  createdAt!: string
+
+  @Column({
+    type: 'text',
+    name: 'last_modified_at',
+    default: () => "datetime('now')",
+  })
+  lastModifiedAt!: string
+}
+`
+}
+
+function buildMigration(ingredientStatusEnum = [], recipeTypeEnum = []) {
+  if (!Array.isArray(ingredientStatusEnum) || ingredientStatusEnum.length === 0) {
+    throw new Error('IngredientStatus enum is not defined in the OpenAPI spec.')
+  }
+
+  if (!Array.isArray(recipeTypeEnum) || recipeTypeEnum.length === 0) {
+    throw new Error('RecipeType enum is not defined in the OpenAPI spec.')
+  }
+
+  const ingredientStatusCheck = ingredientStatusEnum
+    .map((value) => `'${value}'`)
+    .join(',')
+
+  const recipeTypeCheck = recipeTypeEnum.map((value) => `'${value}'`).join(',')
+
   return `import { MigrationInterface, QueryRunner } from 'typeorm'
 
 export class CreateSuppliersAndIngredients1710000000000 implements MigrationInterface {
@@ -447,7 +602,7 @@ export class CreateSuppliersAndIngredients1710000000000 implements MigrationInte
         "id" TEXT PRIMARY KEY NOT NULL,
         "name" TEXT NOT NULL,
         "supplier_id" TEXT NOT NULL,
-        "status" TEXT NOT NULL CHECK ("status" IN ('Active','Inactive')),
+  "status" TEXT NOT NULL CHECK ("status" IN (${ingredientStatusCheck})),
         "category" TEXT NOT NULL,
         "type" TEXT NOT NULL,
         "brand" TEXT,
@@ -498,9 +653,29 @@ export class CreateSuppliersAndIngredients1710000000000 implements MigrationInte
     await queryRunner.query(\`
       CREATE INDEX "idx_ingredients_name" ON "ingredients" ("name")
     \`)
+
+    await queryRunner.query(\`
+      CREATE TABLE "recipes" (
+        "id" TEXT PRIMARY KEY NOT NULL,
+        "name" TEXT NOT NULL,
+        "type" TEXT NOT NULL CHECK ("type" IN (${recipeTypeCheck})),
+        "notes" TEXT,
+        "ingredients" TEXT NOT NULL,
+        "input_parameters" TEXT NOT NULL,
+        "calculated_outputs" TEXT,
+        "created_at" TEXT NOT NULL DEFAULT (datetime('now')),
+        "last_modified_at" TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    \`)
+
+    await queryRunner.query(\`
+      CREATE INDEX "idx_recipes_type" ON "recipes" ("type")
+    \`)
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(\`DROP INDEX IF EXISTS "idx_recipes_type"\`)
+    await queryRunner.query(\`DROP TABLE IF EXISTS "recipes"\`)
     await queryRunner.query(\`DROP INDEX IF EXISTS "idx_ingredients_name"\`)
     await queryRunner.query(\`DROP INDEX IF EXISTS "idx_ingredients_status"\`)
     await queryRunner.query(\`DROP INDEX IF EXISTS "idx_ingredients_category"\`)

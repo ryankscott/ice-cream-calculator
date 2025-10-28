@@ -5,6 +5,7 @@ info:
   description: >
     Canonical schema for managing gelato ingredients and suppliers inside the ice-cream-calculator project. This document acts as the single source of truth for entity definitions and API payload shapes.
 
+
   contact:
     name: Ice Cream Calculator Maintainers
     url: https://github.com/ryanscott/ice-cream-calculator
@@ -17,6 +18,8 @@ tags:
     description: Ingredient catalog operations
   - name: Suppliers
     description: Supplier directory operations
+  - name: Recipes
+    description: Recipe formulation operations
 paths:
   /api/ingredients:
     get:
@@ -204,6 +207,86 @@ paths:
           description: Supplier deleted
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/recipes:
+    get:
+      tags: [Recipes]
+      summary: List recipes
+      description: Retrieve a list of recipes with optional filters.
+      operationId: listRecipes
+      parameters:
+        - $ref: "#/components/parameters/RecipeType"
+      responses:
+        "200":
+          description: A list of recipes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecipeListResponse"
+    post:
+      tags: [Recipes]
+      summary: Create a recipe
+      description: Create a new recipe definition with its target parameters.
+      operationId: createRecipe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecipeCreateInput"
+      responses:
+        "201":
+          description: Recipe created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recipe"
+  /api/recipes/{recipeId}:
+    parameters:
+      - $ref: "#/components/parameters/RecipeId"
+    get:
+      tags: [Recipes]
+      summary: Retrieve a recipe
+      description: Fetch a single recipe by its identifier.
+      operationId: getRecipe
+      responses:
+        "200":
+          description: Found recipe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recipe"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Recipes]
+      summary: Replace a recipe
+      description: Replace all mutable fields of a recipe.
+      operationId: updateRecipe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecipeUpdateInput"
+      responses:
+        "200":
+          description: Updated recipe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recipe"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Recipes]
+      summary: Archive a recipe
+      description: Archive or remove a recipe from active use.
+      operationId: deleteRecipe
+      responses:
+        "204":
+          description: Recipe archived
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   parameters:
     IngredientId:
@@ -253,6 +336,19 @@ components:
         minimum: 1
         maximum: 200
         default: 25
+    RecipeId:
+      name: recipeId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/RecipeId"
+    RecipeType:
+      name: type
+      in: query
+      required: false
+      description: Filter recipes by formulation type.
+      schema:
+        $ref: "#/components/schemas/RecipeType"
   schemas:
     IngredientId:
       type: string
@@ -342,6 +438,160 @@ components:
             $ref: "#/components/schemas/Supplier"
         meta:
           $ref: "#/components/schemas/PaginationMeta"
+      required:
+        - data
+        - meta
+    RecipeId:
+      type: string
+      description: Unique recipe identifier (UUID v4)
+      format: uuid
+    RecipeType:
+      type: string
+      enum:
+        - MilkBased
+        - FruitBased
+        - FruitWithFat
+    RecipeIngredient:
+      type: object
+      properties:
+        ingredientId:
+          $ref: "#/components/schemas/IngredientId"
+        quantityInGrams:
+          type: number
+          format: float
+          description: Amount of this ingredient to include in the batch.
+      required:
+        - ingredientId
+        - quantityInGrams
+    RecipeInputParameters:
+      type: object
+      properties:
+        desiredPac:
+          type: number
+          format: float
+        desiredPacFromLactose:
+          type: number
+          format: float
+        desiredPacFromSucrose:
+          type: number
+          format: float
+        goalFatGramsPerBatch:
+          type: number
+          format: float
+        fatFromMilkPer100g:
+          type: number
+          format: float
+        goalMsnf:
+          type: number
+          format: float
+          description: Target milk solids non-fat value.
+        neutroAmount:
+          type: number
+          format: float
+          description: Stabiliser amount to add to the batch.
+      required:
+        - desiredPac
+        - desiredPacFromLactose
+        - desiredPacFromSucrose
+        - goalFatGramsPerBatch
+        - fatFromMilkPer100g
+        - goalMsnf
+        - neutroAmount
+    RecipeCalculatedOutputs:
+      type: object
+      description: Computed formulation results derived from the recipe inputs.
+      properties:
+        totalDextroseToAdd:
+          type: number
+          format: float
+        creamToAddInGrams:
+          type: number
+          format: float
+        skimMilkPowderToAddInGrams:
+          type: number
+          format: float
+        milkOrWaterToAddInGrams:
+          type: number
+          format: float
+      required:
+        - totalDextroseToAdd
+        - creamToAddInGrams
+        - skimMilkPowderToAddInGrams
+        - milkOrWaterToAddInGrams
+    RecipeBase:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/RecipeType"
+        notes:
+          type: string
+          nullable: true
+        ingredients:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeIngredient"
+          minItems: 1
+        inputParameters:
+          $ref: "#/components/schemas/RecipeInputParameters"
+      required:
+        - name
+        - type
+        - ingredients
+        - inputParameters
+    RecipeCreateInput:
+      allOf:
+        - $ref: "#/components/schemas/RecipeBase"
+        - type: object
+          properties:
+            id:
+              $ref: "#/components/schemas/RecipeId"
+          required:
+            - id
+    RecipeUpdateInput:
+      allOf:
+        - $ref: "#/components/schemas/RecipeBase"
+        - type: object
+          properties:
+            id:
+              $ref: "#/components/schemas/RecipeId"
+          required:
+            - id
+    Recipe:
+      allOf:
+        - $ref: "#/components/schemas/RecipeBase"
+        - type: object
+          properties:
+            id:
+              $ref: "#/components/schemas/RecipeId"
+            calculatedOutputs:
+              $ref: "#/components/schemas/RecipeCalculatedOutputs"
+              readOnly: true
+              nullable: true
+            createdAt:
+              $ref: "#/components/schemas/DateTime"
+            lastModifiedAt:
+              $ref: "#/components/schemas/DateTime"
+          required:
+            - id
+            - createdAt
+            - lastModifiedAt
+    RecipeListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Recipe"
+        meta:
+          type: object
+          properties:
+            totalItems:
+              type: integer
+              minimum: 0
+          required:
+            - totalItems
       required:
         - data
         - meta

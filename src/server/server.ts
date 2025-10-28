@@ -8,6 +8,7 @@ const DEFAULT_PORT = Number(process.env.PORT ?? 4000);
 export async function startServer(port = DEFAULT_PORT) {
 	if (!AppDataSource.isInitialized) {
 		await AppDataSource.initialize();
+		await AppDataSource.runMigrations();
 	}
 
 	const app = createApp(AppDataSource);

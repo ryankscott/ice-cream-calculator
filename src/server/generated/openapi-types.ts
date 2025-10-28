@@ -77,6 +77,60 @@ export interface paths {
 		patch: operations["setIngredientStatus"];
 		trace?: never;
 	};
+	"/api/recipes": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List recipes
+		 * @description Retrieve a list of recipes with optional filters.
+		 */
+		get: operations["listRecipes"];
+		put?: never;
+		/**
+		 * Create a recipe
+		 * @description Create a new recipe definition with its target parameters.
+		 */
+		post: operations["createRecipe"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/recipes/{recipeId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				recipeId: components["parameters"]["RecipeId"];
+			};
+			cookie?: never;
+		};
+		/**
+		 * Retrieve a recipe
+		 * @description Fetch a single recipe by its identifier.
+		 */
+		get: operations["getRecipe"];
+		/**
+		 * Replace a recipe
+		 * @description Replace all mutable fields of a recipe.
+		 */
+		put: operations["updateRecipe"];
+		post?: never;
+		/**
+		 * Archive a recipe
+		 * @description Archive or remove a recipe from active use.
+		 */
+		delete: operations["deleteRecipe"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/suppliers": {
 		parameters: {
 			query?: never;
@@ -235,6 +289,79 @@ export interface components {
 			totalItems: number;
 			totalPages: number;
 		};
+		Recipe: components["schemas"]["RecipeBase"] & {
+			readonly calculatedOutputs?: components["schemas"]["RecipeCalculatedOutputs"];
+			createdAt: components["schemas"]["DateTime"];
+			id: components["schemas"]["RecipeId"];
+			lastModifiedAt: components["schemas"]["DateTime"];
+		};
+		RecipeBase: {
+			ingredients: components["schemas"]["RecipeIngredient"][];
+			inputParameters: components["schemas"]["RecipeInputParameters"];
+			name: string;
+			notes?: string | null;
+			type: components["schemas"]["RecipeType"];
+		};
+		/** @description Computed formulation results derived from the recipe inputs. */
+		RecipeCalculatedOutputs: {
+			/** Format: float */
+			creamToAddInGrams: number;
+			/** Format: float */
+			milkOrWaterToAddInGrams: number;
+			/** Format: float */
+			skimMilkPowderToAddInGrams: number;
+			/** Format: float */
+			totalDextroseToAdd: number;
+		};
+		RecipeCreateInput: components["schemas"]["RecipeBase"] & {
+			id: components["schemas"]["RecipeId"];
+		};
+		/**
+		 * Format: uuid
+		 * @description Unique recipe identifier (UUID v4)
+		 */
+		RecipeId: string;
+		RecipeIngredient: {
+			ingredientId: components["schemas"]["IngredientId"];
+			/**
+			 * Format: float
+			 * @description Amount of this ingredient to include in the batch.
+			 */
+			quantityInGrams: number;
+		};
+		RecipeInputParameters: {
+			/** Format: float */
+			desiredPac: number;
+			/** Format: float */
+			desiredPacFromLactose: number;
+			/** Format: float */
+			desiredPacFromSucrose: number;
+			/** Format: float */
+			fatFromMilkPer100g: number;
+			/** Format: float */
+			goalFatGramsPerBatch: number;
+			/**
+			 * Format: float
+			 * @description Target milk solids non-fat value.
+			 */
+			goalMsnf: number;
+			/**
+			 * Format: float
+			 * @description Stabiliser amount to add to the batch.
+			 */
+			neutroAmount: number;
+		};
+		RecipeListResponse: {
+			data: components["schemas"]["Recipe"][];
+			meta: {
+				totalItems: number;
+			};
+		};
+		/** @enum {string} */
+		RecipeType: "MilkBased" | "FruitBased" | "FruitWithFat";
+		RecipeUpdateInput: components["schemas"]["RecipeBase"] & {
+			id: components["schemas"]["RecipeId"];
+		};
 		Supplier: components["schemas"]["SupplierBase"] & {
 			createdAt: components["schemas"]["DateTime"];
 			id: components["schemas"]["SupplierId"];
@@ -282,6 +409,9 @@ export interface components {
 		IngredientStatus: components["schemas"]["IngredientStatus"];
 		Page: number;
 		PageSize: number;
+		RecipeId: components["schemas"]["RecipeId"];
+		/** @description Filter recipes by formulation type. */
+		RecipeType: components["schemas"]["RecipeType"];
 		/** @description Filter ingredients by supplier identifier. */
 		SupplierFilterId: components["schemas"]["SupplierId"];
 		SupplierId: components["schemas"]["SupplierId"];
@@ -435,6 +565,124 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["Ingredient"];
 				};
+			};
+			404: components["responses"]["NotFound"];
+		};
+	};
+	listRecipes: {
+		parameters: {
+			query?: {
+				/** @description Filter recipes by formulation type. */
+				type?: components["parameters"]["RecipeType"];
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description A list of recipes */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RecipeListResponse"];
+				};
+			};
+		};
+	};
+	createRecipe: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RecipeCreateInput"];
+			};
+		};
+		responses: {
+			/** @description Recipe created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Recipe"];
+				};
+			};
+		};
+	};
+	getRecipe: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				recipeId: components["parameters"]["RecipeId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Found recipe */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Recipe"];
+				};
+			};
+			404: components["responses"]["NotFound"];
+		};
+	};
+	updateRecipe: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				recipeId: components["parameters"]["RecipeId"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RecipeUpdateInput"];
+			};
+		};
+		responses: {
+			/** @description Updated recipe */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Recipe"];
+				};
+			};
+			404: components["responses"]["NotFound"];
+		};
+	};
+	deleteRecipe: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				recipeId: components["parameters"]["RecipeId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Recipe archived */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 			404: components["responses"]["NotFound"];
 		};

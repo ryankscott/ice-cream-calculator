@@ -36,7 +36,7 @@ export class IngredientService {
 		}
 
 		if (supplierId) {
-			qb.andWhere("ingredient.supplierId = :supplierId", { supplierId });
+			qb.andWhere("ingredient.supplier_id = :supplierId", { supplierId });
 		}
 
 		const data = await qb.getMany();

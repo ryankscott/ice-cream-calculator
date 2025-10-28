@@ -2,8 +2,11 @@ import cors from "cors";
 import express from "express";
 import type { DataSource } from "typeorm";
 
-import { createIngredientsRouter } from "../routes/ingredients";
-import { createSuppliersRouter } from "../routes/suppliers";
+import {
+	createIngredientsRouter,
+	createRecipesRouter,
+	createSuppliersRouter,
+} from "../routes";
 import { errorHandler } from "./error-handler";
 import { getOpenApiDocument } from "./openapi";
 
@@ -24,6 +27,7 @@ export function createApp(dataSource: DataSource) {
 
 	app.use("/api/ingredients", createIngredientsRouter(dataSource));
 	app.use("/api/suppliers", createSuppliersRouter(dataSource));
+	app.use("/api/recipes", createRecipesRouter(dataSource));
 
 	app.use(errorHandler);
 

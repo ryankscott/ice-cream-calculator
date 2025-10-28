@@ -20,6 +20,8 @@ export const IngredientListQuerySchema = z
 		status: schemas.IngredientStatus.optional(),
 		category: z.string().min(1).optional(),
 		supplierId: schemas.SupplierId.uuid().optional(),
+		page: z.number().int().min(1).optional(),
+		pageSize: z.number().int().min(1).max(200).optional(),
 	})
 	.strict();
 

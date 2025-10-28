@@ -24,7 +24,7 @@ export class CreateSuppliersAndIngredients1710000000000
         "id" TEXT PRIMARY KEY NOT NULL,
         "name" TEXT NOT NULL,
         "supplier_id" TEXT NOT NULL,
-        "status" TEXT NOT NULL CHECK ("status" IN ('Active','Inactive')),
+  "status" TEXT NOT NULL CHECK ("status" IN ('Active','Inactive')),
         "category" TEXT NOT NULL,
         "type" TEXT NOT NULL,
         "brand" TEXT,
@@ -75,9 +75,29 @@ export class CreateSuppliersAndIngredients1710000000000
 		await queryRunner.query(`
       CREATE INDEX "idx_ingredients_name" ON "ingredients" ("name")
     `);
+
+		await queryRunner.query(`
+      CREATE TABLE "recipes" (
+        "id" TEXT PRIMARY KEY NOT NULL,
+        "name" TEXT NOT NULL,
+        "type" TEXT NOT NULL CHECK ("type" IN ('MilkBased','FruitBased','FruitWithFat')),
+        "notes" TEXT,
+        "ingredients" TEXT NOT NULL,
+        "input_parameters" TEXT NOT NULL,
+        "calculated_outputs" TEXT,
+        "created_at" TEXT NOT NULL DEFAULT (datetime('now')),
+        "last_modified_at" TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+
+		await queryRunner.query(`
+      CREATE INDEX "idx_recipes_type" ON "recipes" ("type")
+    `);
 	}
 
 	public async down(queryRunner: QueryRunner): Promise<void> {
+		await queryRunner.query(`DROP INDEX IF EXISTS "idx_recipes_type"`);
+		await queryRunner.query(`DROP TABLE IF EXISTS "recipes"`);
 		await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_name"`);
 		await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_status"`);
 		await queryRunner.query(`DROP INDEX IF EXISTS "idx_ingredients_category"`);

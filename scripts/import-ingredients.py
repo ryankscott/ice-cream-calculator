@@ -8,13 +8,13 @@ It automatically extracts unique suppliers from the CSV and creates them in the 
 
 import csv
 import json
+import math
 import re
 import sys
 import uuid
 from typing import Optional, Dict, Any
 from urllib import request as urllib_request
 from urllib.error import URLError
-import urllib.parse
 
 # Configuration
 CSV_FILE = "/Users/ryan/Code/ice-cream-calculator/data/ingredients.csv"
@@ -67,6 +67,72 @@ def parse_status(status: str) -> str:
     return "Active" if status.split(",")[0].strip() == "Active" else "Inactive"
 
 
+def parse_currency_to_cents(value: str) -> Optional[int]:
+    """Convert a currency string (e.g. "$4.50") into integer cents."""
+    if not value:
+        return None
+
+    cleaned = (
+        value.replace("$", "")
+        .replace(",", "")
+        .strip()
+    )
+
+    if not cleaned or cleaned in {"#DIV/0!", "#VALUE!", "#REF!", "#N/A"}:
+        return None
+
+    try:
+        numeric_value = float(cleaned)
+    except ValueError:
+        return None
+
+    return int(round(numeric_value * 100))
+
+
+def parse_percentage(value: str) -> Optional[float]:
+    """Convert percentage strings like "70%" into numeric percent values."""
+    if not value:
+        return None
+
+    cleaned = value.replace("%", "").strip()
+    if not cleaned:
+        return None
+
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def calculate_cost_per_kg_cents(
+    cost_per_pack_cents: Optional[int],
+    package_size_grams: Optional[float],
+    percent_useful_product: Optional[float],
+) -> Optional[int]:
+    if cost_per_pack_cents is None or package_size_grams is None:
+        return None
+
+    if package_size_grams <= 0:
+        return None
+
+    useful_fraction = 1.0
+    if percent_useful_product is not None:
+        if percent_useful_product <= 0:
+            return None
+        useful_fraction = percent_useful_product / 100
+
+    usable_grams = package_size_grams * useful_fraction
+    if usable_grams <= 0:
+        return None
+
+    cost_per_gram = cost_per_pack_cents / usable_grams
+    cost_per_1000g = cost_per_gram * 1000
+    if not math.isfinite(cost_per_1000g):
+        return None
+
+    return int(round(cost_per_1000g))
+
+
 def get_supplier_id(supplier: str) -> str:
     """Get supplier ID from name, using mapping from CSV."""
     if not supplier:
@@ -81,6 +147,24 @@ def transform_row(row: Dict[str, str]) -> Optional[Dict[str, Any]]:
     name = row.get("Name", "").strip()
     if not name:
         return None
+
+    package_size = parse_numeric(row.get("Package size", ""))
+    cost_per_pack_cents = parse_currency_to_cents(
+        row.get("Cost per pack (GST excl)", "")
+    )
+    percent_useful_product = parse_percentage(row.get("% of useful product", ""))
+
+    cost_per_kg_cents = calculate_cost_per_kg_cents(
+        cost_per_pack_cents,
+        package_size,
+        percent_useful_product,
+    )
+
+    if cost_per_kg_cents is None:
+        cost_per_kg_cents = parse_currency_to_cents(row.get("Cost per kg", ""))
+
+    if cost_per_kg_cents is None:
+        cost_per_kg_cents = parse_currency_to_cents(row.get("Initial cost per kg", ""))
 
     return {
         "id": generate_id(),
@@ -113,7 +197,10 @@ def transform_row(row: Dict[str, str]) -> Optional[Dict[str, Any]]:
         "dryCocoaSolidsPer100g": parse_numeric(row.get("Dry Cocoa solids (without fat)", "")),
         "cocoaButterPer100g": parse_numeric(row.get("Cocoa butter", "")),
         "supplierCode": (row.get("Supplier code", "") or "").strip() or None,
-        "packageSizeInGrams": parse_numeric(row.get("Package size", "")),
+        "packageSizeInGrams": package_size,
+        "costPerPackInCentsExGst": cost_per_pack_cents,
+        "costPer1000gInCentsExGst": cost_per_kg_cents,
+        "percentOfUsefulProduct": percent_useful_product,
         "allergens": {},
     }
 
